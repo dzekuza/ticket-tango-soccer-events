@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -109,7 +108,10 @@ export const useSupabaseTickets = () => {
         .select()
         .single();
 
-      if (batchError) throw batchError;
+      if (batchError) {
+        console.error('Ticket batch creation error:', batchError);
+        throw batchError;
+      }
 
       console.log('Ticket batch created:', ticketBatch);
 
@@ -127,34 +129,78 @@ export const useSupabaseTickets = () => {
         .insert(tiersToInsert)
         .select();
 
-      if (tiersError) throw tiersError;
+      if (tiersError) {
+        console.error('Ticket tiers creation error:', tiersError);
+        throw tiersError;
+      }
 
       console.log('Ticket tiers created:', insertedTiers);
 
-      // Create individual tickets with tier assignments
-      const ticketsToInsert = individualTickets.map(ticket => ({
-        ticket_batch_id: ticketBatch.id,
-        qr_code: ticket.qrCode,
-        qr_code_image: ticket.qrCodeImage,
-        tier_id: ticket.tierId,
-        seat_section: ticket.seatSection,
-        seat_row: ticket.seatRow,
-        seat_number: ticket.seatNumber,
-      }));
+      // Create mapping of tier index to actual tier ID
+      const tierIdMapping: Record<string, string> = {};
+      insertedTiers.forEach((tier, index) => {
+        tierIdMapping[`tier_${index}`] = tier.id;
+      });
+
+      console.log('Tier ID mapping:', tierIdMapping);
+
+      // Create individual tickets with proper tier assignments
+      const ticketsToInsert = individualTickets.map(ticket => {
+        const actualTierId = tierIdMapping[ticket.tierId];
+        if (!actualTierId) {
+          console.error('Missing tier ID for ticket:', ticket.tierId);
+          throw new Error(`Invalid tier ID: ${ticket.tierId}`);
+        }
+        
+        return {
+          ticket_batch_id: ticketBatch.id,
+          qr_code: ticket.qrCode,
+          qr_code_image: ticket.qrCodeImage,
+          tier_id: actualTierId,
+          seat_section: ticket.seatSection,
+          seat_row: ticket.seatRow,
+          seat_number: ticket.seatNumber,
+        };
+      });
+
+      console.log('Creating individual tickets:', ticketsToInsert.length);
 
       const { data: insertedIndividualTickets, error: ticketsError } = await supabase
         .from('individual_tickets')
         .insert(ticketsToInsert)
         .select();
 
-      if (ticketsError) throw ticketsError;
+      if (ticketsError) {
+        console.error('Individual tickets creation error:', ticketsError);
+        throw ticketsError;
+      }
 
-      console.log('Individual tickets created:', insertedIndividualTickets);
+      console.log('Individual tickets created successfully:', insertedIndividualTickets.length);
+
+      // Verify all tickets were created
+      if (insertedIndividualTickets.length !== individualTickets.length) {
+        throw new Error(`Expected ${individualTickets.length} tickets, but only ${insertedIndividualTickets.length} were created`);
+      }
+
+      // Prepare individual tickets data for PDF generation
+      const ticketsForPDF = insertedIndividualTickets.map((dbTicket, index) => {
+        const originalTicket = individualTickets[index];
+        return {
+          id: dbTicket.id,
+          qrCode: dbTicket.qr_code,
+          qrCodeImage: dbTicket.qr_code_image,
+          eventTitle: eventData.eventTitle,
+          price: originalTicket.price,
+          isUsed: dbTicket.is_used,
+          validatedAt: dbTicket.validated_at ? new Date(dbTicket.validated_at) : undefined,
+        };
+      });
+
+      console.log('Starting PDF generation with tickets:', ticketsForPDF.length);
 
       // Generate and upload PDF
-      console.log('Starting PDF generation...');
       const pdfResult = await generateAndUploadTicketPDF(
-        individualTickets,
+        ticketsForPDF,
         {
           id: ticketBatch.id,
           eventTitle: eventData.eventTitle,
@@ -162,7 +208,7 @@ export const useSupabaseTickets = () => {
           price: ticketBatch.price,
           quantity: ticketBatch.quantity,
           createdAt: new Date(ticketBatch.created_at),
-          tickets: individualTickets,
+          tickets: ticketsForPDF,
           // Pass enhanced event data
           eventDate: eventData.eventDate,
           eventStartTime: eventData.eventStartTime,
@@ -214,7 +260,7 @@ export const useSupabaseTickets = () => {
       console.error('Error creating enhanced ticket batch:', error);
       toast({
         title: "Error",
-        description: "Failed to create tickets",
+        description: error instanceof Error ? error.message : "Failed to create tickets",
         variant: "destructive",
       });
       return null;

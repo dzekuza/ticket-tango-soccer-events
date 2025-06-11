@@ -18,13 +18,28 @@ export const generateAndUploadTicketPDF = async (
   console.log('Starting PDF generation for tickets:', tickets.length);
   
   try {
+    // Enhanced validation
     if (!tickets || tickets.length === 0) {
+      console.error('No tickets provided for PDF generation');
       throw new Error('No tickets provided for PDF generation');
     }
 
     if (!userId) {
+      console.error('User ID is required for PDF upload');
       throw new Error('User ID is required for PDF upload');
     }
+
+    if (!ticketBatch) {
+      console.error('Ticket batch information is required');
+      throw new Error('Ticket batch information is required');
+    }
+
+    console.log('Validation passed, proceeding with PDF generation');
+    console.log('Ticket batch info:', {
+      id: ticketBatch.id,
+      title: ticketBatch.eventTitle,
+      ticketCount: tickets.length
+    });
 
     // Create a temporary container for rendering
     const container = document.createElement('div');
@@ -57,7 +72,7 @@ export const generateAndUploadTicketPDF = async (
         letterRendering: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        logging: true
+        logging: false
       },
       jsPDF: { 
         unit: 'mm', 
@@ -77,12 +92,12 @@ export const generateAndUploadTicketPDF = async (
     document.body.removeChild(container);
 
     if (!pdfBlob || pdfBlob.size === 0) {
-      throw new Error('Generated PDF is empty');
+      throw new Error('Generated PDF is empty or invalid');
     }
 
     // Upload to Supabase storage
     const fileName = `${userId}/${ticketBatch.id}_${Date.now()}.pdf`;
-    console.log('Uploading PDF to:', fileName);
+    console.log('Uploading PDF to storage path:', fileName);
 
     const { data, error } = await supabase.storage
       .from('tickets')
@@ -93,7 +108,7 @@ export const generateAndUploadTicketPDF = async (
 
     if (error) {
       console.error('Storage upload error:', error);
-      throw new Error(`Upload failed: ${error.message}`);
+      throw new Error(`Storage upload failed: ${error.message}`);
     }
 
     console.log('PDF uploaded successfully:', data);
@@ -107,7 +122,7 @@ export const generateAndUploadTicketPDF = async (
       throw new Error('Failed to get public URL for uploaded PDF');
     }
 
-    console.log('PDF public URL:', urlData.publicUrl);
+    console.log('PDF public URL generated:', urlData.publicUrl);
 
     return {
       success: true,
@@ -118,7 +133,7 @@ export const generateAndUploadTicketPDF = async (
     console.error('PDF generation and upload failed:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: error instanceof Error ? error.message : 'Unknown error occurred during PDF generation'
     };
   }
 };
