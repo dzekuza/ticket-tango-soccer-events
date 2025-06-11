@@ -12,9 +12,10 @@ interface ManualScannerProps {
 
 export const ManualScanner: React.FC<ManualScannerProps> = ({ onScan }) => {
   const [scanInput, setScanInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const handleManualScan = () => {
+  const handleManualScan = async () => {
     if (!scanInput.trim()) {
       toast({
         title: "Error",
@@ -24,12 +25,26 @@ export const ManualScanner: React.FC<ManualScannerProps> = ({ onScan }) => {
       return;
     }
 
-    onScan(scanInput.trim());
-    setScanInput('');
+    setIsProcessing(true);
+    
+    try {
+      // Add a small delay to show processing state
+      await new Promise(resolve => setTimeout(resolve, 100));
+      onScan(scanInput.trim());
+      setScanInput('');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process the input. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isProcessing) {
       handleManualScan();
     }
   };
@@ -51,14 +66,23 @@ export const ManualScanner: React.FC<ManualScannerProps> = ({ onScan }) => {
               onChange={(e) => setScanInput(e.target.value)}
               onKeyPress={handleKeyPress}
               className="flex-1"
+              disabled={isProcessing}
+              aria-label="QR code or ticket ID input"
             />
             <Button 
               onClick={handleManualScan}
               className="bg-green-600 hover:bg-green-700"
+              disabled={isProcessing}
+              aria-label="Process manual input"
             >
               <Search className="w-4 h-4" />
             </Button>
           </div>
+          {isProcessing && (
+            <p className="text-sm text-gray-600" aria-live="polite">
+              Processing...
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

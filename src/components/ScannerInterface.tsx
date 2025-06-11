@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Camera, Search } from 'lucide-react';
 import { QRScanner } from './QRScanner';
 import { ManualScanner } from './ManualScanner';
+import { ScannerErrorBoundary } from './ScannerErrorBoundary';
 
 interface ScannerInterfaceProps {
   onScan: (qrCodeData: string) => void;
@@ -26,10 +27,12 @@ export const ScannerInterface: React.FC<ScannerInterfaceProps> = ({ onScan }) =>
       </TabsList>
 
       <TabsContent value="camera" className="mt-6">
-        <QRScanner 
-          onScan={onScan} 
-          isActive={activeTab === 'camera'} 
-        />
+        <ScannerErrorBoundary>
+          <QRScanner 
+            onScan={onScan} 
+            isActive={activeTab === 'camera'} 
+          />
+        </ScannerErrorBoundary>
       </TabsContent>
 
       <TabsContent value="manual" className="mt-6">
