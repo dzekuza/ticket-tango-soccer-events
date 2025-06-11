@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -85,6 +86,8 @@ export const useSupabaseTickets = () => {
   ) => {
     if (!user) return null;
 
+    console.log('Creating enhanced ticket batch with data:', { eventData, tiers, individualTicketsCount: individualTickets.length });
+
     try {
       // Create ticket batch with enhanced fields
       const { data: ticketBatch, error: batchError } = await supabase
@@ -108,6 +111,8 @@ export const useSupabaseTickets = () => {
 
       if (batchError) throw batchError;
 
+      console.log('Ticket batch created:', ticketBatch);
+
       // Create ticket tiers
       const tiersToInsert = tiers.map(tier => ({
         ticket_batch_id: ticketBatch.id,
@@ -124,6 +129,8 @@ export const useSupabaseTickets = () => {
 
       if (tiersError) throw tiersError;
 
+      console.log('Ticket tiers created:', insertedTiers);
+
       // Create individual tickets with tier assignments
       const ticketsToInsert = individualTickets.map(ticket => ({
         ticket_batch_id: ticketBatch.id,
@@ -135,13 +142,17 @@ export const useSupabaseTickets = () => {
         seat_number: ticket.seatNumber,
       }));
 
-      const { error: ticketsError } = await supabase
+      const { data: insertedIndividualTickets, error: ticketsError } = await supabase
         .from('individual_tickets')
-        .insert(ticketsToInsert);
+        .insert(ticketsToInsert)
+        .select();
 
       if (ticketsError) throw ticketsError;
 
+      console.log('Individual tickets created:', insertedIndividualTickets);
+
       // Generate and upload PDF
+      console.log('Starting PDF generation...');
       const pdfResult = await generateAndUploadTicketPDF(
         individualTickets,
         {
@@ -164,8 +175,11 @@ export const useSupabaseTickets = () => {
         user.id
       );
 
+      console.log('PDF generation result:', pdfResult);
+
       // Update ticket batch with PDF URL if successful
       if (pdfResult.success && pdfResult.pdfUrl) {
+        console.log('Updating ticket batch with PDF URL:', pdfResult.pdfUrl);
         const { error: updateError } = await supabase
           .from('tickets')
           .update({ pdf_url: pdfResult.pdfUrl })
@@ -173,12 +187,23 @@ export const useSupabaseTickets = () => {
 
         if (updateError) {
           console.error('Failed to update PDF URL:', updateError);
+          toast({
+            title: "Warning",
+            description: "Tickets created, but failed to save PDF link. You can regenerate it later.",
+            variant: "destructive",
+          });
+        } else {
+          console.log('PDF URL updated successfully');
+          toast({
+            title: "Success!",
+            description: "Tickets created and PDF generated successfully",
+          });
         }
       } else if (pdfResult.error) {
         console.error('PDF generation failed:', pdfResult.error);
         toast({
           title: "Warning",
-          description: "Tickets created successfully, but PDF generation failed. You can regenerate it later.",
+          description: `Tickets created successfully, but PDF generation failed: ${pdfResult.error}`,
           variant: "destructive",
         });
       }
@@ -205,6 +230,8 @@ export const useSupabaseTickets = () => {
   ) => {
     if (!user) return null;
 
+    console.log('Creating ticket batch with data:', { eventTitle, description, price, quantity, individualTicketsCount: individualTickets.length });
+
     try {
       // Create ticket batch
       const { data: ticketBatch, error: batchError } = await supabase
@@ -221,6 +248,8 @@ export const useSupabaseTickets = () => {
 
       if (batchError) throw batchError;
 
+      console.log('Ticket batch created:', ticketBatch);
+
       // Create individual tickets
       const ticketsToInsert = individualTickets.map(ticket => ({
         ticket_batch_id: ticketBatch.id,
@@ -228,13 +257,17 @@ export const useSupabaseTickets = () => {
         qr_code_image: ticket.qrCodeImage,
       }));
 
-      const { error: ticketsError } = await supabase
+      const { data: insertedIndividualTickets, error: ticketsError } = await supabase
         .from('individual_tickets')
-        .insert(ticketsToInsert);
+        .insert(ticketsToInsert)
+        .select();
 
       if (ticketsError) throw ticketsError;
 
+      console.log('Individual tickets created:', insertedIndividualTickets);
+
       // Generate and upload PDF
+      console.log('Starting PDF generation...');
       const pdfResult = await generateAndUploadTicketPDF(
         individualTickets,
         {
@@ -249,8 +282,11 @@ export const useSupabaseTickets = () => {
         user.id
       );
 
+      console.log('PDF generation result:', pdfResult);
+
       // Update ticket batch with PDF URL if successful
       if (pdfResult.success && pdfResult.pdfUrl) {
+        console.log('Updating ticket batch with PDF URL:', pdfResult.pdfUrl);
         const { error: updateError } = await supabase
           .from('tickets')
           .update({ pdf_url: pdfResult.pdfUrl })
@@ -258,12 +294,23 @@ export const useSupabaseTickets = () => {
 
         if (updateError) {
           console.error('Failed to update PDF URL:', updateError);
+          toast({
+            title: "Warning",
+            description: "Tickets created, but failed to save PDF link. You can regenerate it later.",
+            variant: "destructive",
+          });
+        } else {
+          console.log('PDF URL updated successfully');
+          toast({
+            title: "Success!",
+            description: "Tickets created and PDF generated successfully",
+          });
         }
       } else if (pdfResult.error) {
         console.error('PDF generation failed:', pdfResult.error);
         toast({
           title: "Warning",
-          description: "Tickets created successfully, but PDF generation failed. You can regenerate it later.",
+          description: `Tickets created successfully, but PDF generation failed: ${pdfResult.error}`,
           variant: "destructive",
         });
       }
@@ -306,12 +353,16 @@ export const useSupabaseTickets = () => {
   const regeneratePDF = async (ticketId: string) => {
     if (!user) return false;
 
+    console.log('Regenerating PDF for ticket:', ticketId);
+
     try {
       // Find the ticket batch and its individual tickets
       const ticket = tickets.find(t => t.id === ticketId);
       if (!ticket) {
         throw new Error('Ticket not found');
       }
+
+      console.log('Found ticket for regeneration:', ticket);
 
       // Generate and upload PDF
       const pdfResult = await generateAndUploadTicketPDF(
@@ -331,10 +382,20 @@ export const useSupabaseTickets = () => {
           price: ticket.price,
           quantity: ticket.quantity,
           createdAt: new Date(ticket.created_at),
-          tickets: []
+          tickets: [],
+          // Include enhanced event data
+          eventDate: ticket.event_date,
+          eventStartTime: ticket.event_start_time,
+          eventEndTime: ticket.event_end_time,
+          homeTeam: ticket.home_team,
+          awayTeam: ticket.away_team,
+          stadiumName: ticket.stadium_name,
+          competition: ticket.competition,
         },
         user.id
       );
+
+      console.log('PDF regeneration result:', pdfResult);
 
       if (pdfResult.success && pdfResult.pdfUrl) {
         // Update ticket batch with new PDF URL

@@ -15,7 +15,17 @@ export const generateAndUploadTicketPDF = async (
   ticketBatch: Ticket,
   userId: string
 ): Promise<PDFGenerationResult> => {
+  console.log('Starting PDF generation for tickets:', tickets.length);
+  
   try {
+    if (!tickets || tickets.length === 0) {
+      throw new Error('No tickets provided for PDF generation');
+    }
+
+    if (!userId) {
+      throw new Error('User ID is required for PDF upload');
+    }
+
     // Create a temporary container for rendering
     const container = document.createElement('div');
     container.style.position = 'absolute';
@@ -38,7 +48,7 @@ export const generateAndUploadTicketPDF = async (
 
     // Configure PDF options
     const pdfOptions = {
-      margin: 10,
+      margin: [10, 10, 10, 10],
       filename: `${ticketBatch.eventTitle.replace(/[^a-zA-Z0-9]/g, '_')}_tickets.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -46,7 +56,8 @@ export const generateAndUploadTicketPDF = async (
         useCORS: true,
         letterRendering: true,
         allowTaint: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        logging: true
       },
       jsPDF: { 
         unit: 'mm', 
@@ -55,14 +66,24 @@ export const generateAndUploadTicketPDF = async (
       }
     };
 
+    console.log('Generating PDF with options:', pdfOptions);
+
     // Generate PDF blob
     const pdfBlob = await html2pdf().set(pdfOptions).from(container).outputPdf('blob');
     
+    console.log('PDF blob generated, size:', pdfBlob.size);
+
     // Clean up DOM
     document.body.removeChild(container);
 
+    if (!pdfBlob || pdfBlob.size === 0) {
+      throw new Error('Generated PDF is empty');
+    }
+
     // Upload to Supabase storage
-    const fileName = `${userId}/${ticketBatch.id}.pdf`;
+    const fileName = `${userId}/${ticketBatch.id}_${Date.now()}.pdf`;
+    console.log('Uploading PDF to:', fileName);
+
     const { data, error } = await supabase.storage
       .from('tickets')
       .upload(fileName, pdfBlob, {
@@ -71,13 +92,22 @@ export const generateAndUploadTicketPDF = async (
       });
 
     if (error) {
+      console.error('Storage upload error:', error);
       throw new Error(`Upload failed: ${error.message}`);
     }
+
+    console.log('PDF uploaded successfully:', data);
 
     // Get public URL
     const { data: urlData } = supabase.storage
       .from('tickets')
       .getPublicUrl(fileName);
+
+    if (!urlData?.publicUrl) {
+      throw new Error('Failed to get public URL for uploaded PDF');
+    }
+
+    console.log('PDF public URL:', urlData.publicUrl);
 
     return {
       success: true,
@@ -98,6 +128,13 @@ const createTicketHTML = (
   ticketBatch: Ticket,
   addPageBreak: boolean
 ): string => {
+  // Safely access ticket properties with fallbacks
+  const ticketPrice = ticket?.price ?? 0;
+  const ticketId = ticket?.id ?? 'N/A';
+  const isUsed = ticket?.isUsed ?? false;
+  const qrCodeImage = ticket?.qrCodeImage;
+  const validatedAt = ticket?.validatedAt;
+
   return `
     <div style="
       ${addPageBreak ? 'page-break-after: always;' : ''}
@@ -129,7 +166,7 @@ const createTicketHTML = (
               color: #111827;
               margin: 0 0 8px 0;
               line-height: 1.2;
-            ">${ticketBatch.eventTitle}</h1>
+            ">${ticketBatch.eventTitle || 'Event'}</h1>
             ${ticketBatch.description ? `
               <p style="
                 color: #6b7280;
@@ -145,7 +182,7 @@ const createTicketHTML = (
               font-weight: bold;
               color: #059669;
               line-height: 1;
-            ">$${ticket.price.toFixed(2)}</div>
+            ">$${ticketPrice.toFixed(2)}</div>
             <div style="
               font-size: 12px;
               color: #6b7280;
@@ -164,17 +201,61 @@ const createTicketHTML = (
         ">
           <!-- Event Details -->
           <div>
-            <div style="margin-bottom: 12px;">
-              <div style="
-                font-size: 14px;
-                color: #374151;
-                display: flex;
-                align-items: center;
-              ">
-                <span style="margin-right: 8px;">📅</span>
-                Event Date: ${ticketBatch.createdAt.toLocaleDateString()}
+            <!-- Enhanced event details for soccer matches -->
+            ${ticketBatch.eventDate ? `
+              <div style="margin-bottom: 12px;">
+                <div style="
+                  font-size: 14px;
+                  color: #374151;
+                  display: flex;
+                  align-items: center;
+                ">
+                  <span style="margin-right: 8px;">📅</span>
+                  Event Date: ${new Date(ticketBatch.eventDate).toLocaleDateString()}
+                </div>
               </div>
-            </div>
+            ` : `
+              <div style="margin-bottom: 12px;">
+                <div style="
+                  font-size: 14px;
+                  color: #374151;
+                  display: flex;
+                  align-items: center;
+                ">
+                  <span style="margin-right: 8px;">📅</span>
+                  Created: ${ticketBatch.createdAt.toLocaleDateString()}
+                </div>
+              </div>
+            `}
+            
+            ${ticketBatch.eventStartTime && ticketBatch.eventEndTime ? `
+              <div style="margin-bottom: 12px;">
+                <div style="
+                  font-size: 14px;
+                  color: #374151;
+                  display: flex;
+                  align-items: center;
+                ">
+                  <span style="margin-right: 8px;">⏰</span>
+                  Time: ${ticketBatch.eventStartTime} - ${ticketBatch.eventEndTime}
+                </div>
+              </div>
+            ` : ''}
+            
+            ${ticketBatch.stadiumName ? `
+              <div style="margin-bottom: 12px;">
+                <div style="
+                  font-size: 14px;
+                  color: #374151;
+                  display: flex;
+                  align-items: center;
+                ">
+                  <span style="margin-right: 8px;">🏟️</span>
+                  Venue: ${ticketBatch.stadiumName}
+                </div>
+              </div>
+            ` : ''}
+            
             <div style="margin-bottom: 12px;">
               <div style="
                 font-size: 14px;
@@ -183,7 +264,7 @@ const createTicketHTML = (
                 align-items: center;
               ">
                 <span style="margin-right: 8px;">🎫</span>
-                Ticket ID: ${ticket.id.split('_').pop()}
+                Ticket ID: ${ticketId.split('_').pop() || ticketId}
               </div>
             </div>
             <div>
@@ -194,16 +275,16 @@ const createTicketHTML = (
                 align-items: center;
               ">
                 <span style="margin-right: 8px;">✅</span>
-                Status: ${ticket.isUsed ? 'VALIDATED' : 'VALID'}
+                Status: ${isUsed ? 'VALIDATED' : 'VALID'}
               </div>
-              ${ticket.validatedAt ? `
+              ${validatedAt ? `
                 <div style="
                   font-size: 12px;
                   color: #6b7280;
                   margin-top: 4px;
                   margin-left: 20px;
                 ">
-                  Validated: ${ticket.validatedAt.toLocaleString()}
+                  Validated: ${validatedAt.toLocaleString()}
                 </div>
               ` : ''}
             </div>
@@ -217,9 +298,9 @@ const createTicketHTML = (
             border-radius: 8px;
             border: 1px solid #e5e7eb;
           ">
-            ${ticket.qrCodeImage ? `
+            ${qrCodeImage ? `
               <img 
-                src="${ticket.qrCodeImage}" 
+                src="${qrCodeImage}" 
                 alt="QR Code" 
                 style="
                   width: 96px;
@@ -271,7 +352,7 @@ const createTicketHTML = (
             color: #6b7280;
             font-family: monospace;
           ">
-            ${ticket.id}
+            ${ticketId}
           </div>
         </div>
       </div>
