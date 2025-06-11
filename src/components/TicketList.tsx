@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Download, QrCode, Calendar } from 'lucide-react';
 import { Ticket } from './Dashboard';
 import { useToast } from '@/hooks/use-toast';
+import { TicketPreview } from './TicketPreview';
+import { TicketPDFGenerator } from './TicketPDFGenerator';
 
 interface TicketListProps {
   tickets: Ticket[];
@@ -47,7 +48,7 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Manage Tickets</h1>
-        <p className="text-gray-600 mt-1">View and export your created tickets</p>
+        <p className="text-gray-600 mt-1">View, preview, and export your created tickets</p>
       </div>
 
       {tickets.length === 0 ? (
@@ -99,13 +100,16 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
                   </div>
                 </div>
 
-                <div className="flex space-x-4">
+                <div className="flex flex-wrap gap-3">
+                  <TicketPreview ticket={ticket} />
+                  <TicketPDFGenerator ticket={ticket} />
                   <Button 
                     onClick={() => handleExportTickets(ticket)}
-                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                    variant="outline"
+                    className="flex items-center space-x-2"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Export for WordPress</span>
+                    <span>Export CSV</span>
                   </Button>
                   <Button variant="outline" className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4" />
