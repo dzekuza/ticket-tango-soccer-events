@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Ticket, IndividualTicket } from './Dashboard';
+import { Ticket } from './Dashboard';
 import { TicketTemplate } from './TicketTemplate';
 import { TicketPDFGenerator } from './TicketPDFGenerator';
 
@@ -78,13 +78,17 @@ export const TicketPreview: React.FC<TicketPreviewProps> = ({ ticket }) => {
             />
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-center space-x-4">
+          {/* Download Actions */}
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
             <TicketPDFGenerator 
               ticket={ticket} 
               tickets={[currentTicket]} 
+              variant="single"
             />
-            <TicketPDFGenerator ticket={ticket} />
+            <TicketPDFGenerator 
+              ticket={ticket} 
+              variant="all"
+            />
           </div>
         </div>
       </DialogContent>

@@ -21,19 +21,19 @@ export const TicketTemplate: React.FC<TicketTemplateProps> = ({
   eventTime
 }) => {
   return (
-    <div className="ticket-template bg-white border-2 border-gray-300 rounded-lg shadow-lg p-6 w-full max-w-2xl mx-auto print:shadow-none print:border-gray-400">
+    <div className="ticket-template bg-background border-2 border-border rounded-lg shadow-lg p-6 w-full max-w-2xl mx-auto print:shadow-none print:border-gray-400">
       {/* Header Section */}
-      <div className="border-b-2 border-dashed border-gray-300 pb-4 mb-4">
+      <div className="border-b-2 border-dashed border-border pb-4 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{eventTitle}</h1>
+            <h1 className="text-2xl font-bold text-foreground mb-2">{eventTitle}</h1>
             {eventDescription && (
-              <p className="text-gray-600 text-sm">{eventDescription}</p>
+              <p className="text-muted-foreground text-sm">{eventDescription}</p>
             )}
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-green-600">${ticket.price}</div>
-            <div className="text-sm text-gray-500">TICKET PRICE</div>
+            <div className="text-3xl font-bold text-green-600">${ticket.price.toFixed(2)}</div>
+            <div className="text-sm text-muted-foreground">TICKET PRICE</div>
           </div>
         </div>
       </div>
@@ -43,26 +43,26 @@ export const TicketTemplate: React.FC<TicketTemplateProps> = ({
         <div className="space-y-3">
           {eventDate && (
             <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">{eventDate}</span>
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-foreground">{eventDate}</span>
             </div>
           )}
           {eventTime && (
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">{eventTime}</span>
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-foreground">{eventTime}</span>
             </div>
           )}
           {eventVenue && (
             <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">{eventVenue}</span>
+              <MapPin className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-foreground">{eventVenue}</span>
             </div>
           )}
         </div>
         
         {/* QR Code Section */}
-        <div className="flex flex-col items-center justify-center bg-gray-50 p-4 rounded-lg">
+        <div className="flex flex-col items-center justify-center bg-muted p-4 rounded-lg border">
           {ticket.qrCodeImage ? (
             <img 
               src={ticket.qrCodeImage} 
@@ -70,20 +70,20 @@ export const TicketTemplate: React.FC<TicketTemplateProps> = ({
               className="w-24 h-24 mb-2"
             />
           ) : (
-            <div className="w-24 h-24 bg-gray-200 flex items-center justify-center mb-2 rounded">
-              <QrCode className="w-12 h-12 text-gray-400" />
+            <div className="w-24 h-24 bg-muted-foreground/20 flex items-center justify-center mb-2 rounded">
+              <QrCode className="w-12 h-12 text-muted-foreground" />
             </div>
           )}
-          <div className="text-xs text-gray-500 text-center">
-            <div>TICKET ID</div>
+          <div className="text-xs text-muted-foreground text-center">
+            <div className="font-semibold">TICKET ID</div>
             <div className="font-mono">{ticket.id.split('_').pop()}</div>
           </div>
         </div>
       </div>
 
       {/* Bottom Section */}
-      <div className="border-t-2 border-dashed border-gray-300 pt-4">
-        <div className="flex justify-between items-center text-xs text-gray-500">
+      <div className="border-t-2 border-dashed border-border pt-4">
+        <div className="flex justify-between items-center text-xs text-muted-foreground">
           <div>
             <div className="font-semibold">Status: {ticket.isUsed ? 'VALIDATED' : 'VALID'}</div>
             {ticket.validatedAt && (
