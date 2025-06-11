@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,21 +5,27 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin } from 'lucide-react';
+import { Plus, Trash2, ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin, CheckCircle, ArrowRight } from 'lucide-react';
 import { EnhancedTicketFormData } from '@/types/ticket';
 
 interface EnhancedTicketCreationFormProps {
   formData: EnhancedTicketFormData;
   isCreating: boolean;
+  isCompleted?: boolean;
   onInputChange: (field: keyof EnhancedTicketFormData, value: any) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onReset?: () => void;
+  onNavigateToTickets?: () => void;
 }
 
 export const EnhancedTicketCreationForm: React.FC<EnhancedTicketCreationFormProps> = ({
   formData,
   isCreating,
+  isCompleted = false,
   onInputChange,
   onSubmit,
+  onReset,
+  onNavigateToTickets,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
@@ -335,7 +340,60 @@ export const EnhancedTicketCreationForm: React.FC<EnhancedTicketCreationFormProp
     </div>
   );
 
+  const renderCompletedState = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+        <h3 className="text-2xl font-semibold text-green-800">Tickets Created Successfully!</h3>
+        <p className="text-gray-600">Your {getTotalTickets()} tickets have been generated and PDF is being processed</p>
+      </div>
+
+      <Card className="bg-green-50 border-green-200">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <div>
+              <h4 className="text-lg font-semibold">{formData.homeTeam} vs {formData.awayTeam}</h4>
+              <p className="text-gray-600">{formData.stadiumName}</p>
+              <p className="text-sm text-gray-500">
+                {formData.eventDate} • {formData.eventStartTime} - {formData.eventEndTime}
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-green-600">{getTotalTickets()}</p>
+                <p className="text-sm text-gray-600">Tickets Generated</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">${getTotalRevenue().toFixed(2)}</p>
+                <p className="text-sm text-gray-600">Total Revenue</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        {onNavigateToTickets && (
+          <Button onClick={onNavigateToTickets} className="flex-1 bg-blue-600 hover:bg-blue-700">
+            <ArrowRight className="w-4 h-4 mr-2" />
+            View Tickets & Download PDF
+          </Button>
+        )}
+        {onReset && (
+          <Button onClick={onReset} variant="outline" className="flex-1">
+            Create New Event
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   const renderStepContent = () => {
+    if (isCompleted) {
+      return renderCompletedState();
+    }
+
     switch (currentStep) {
       case 1:
         return renderStep1();
@@ -355,57 +413,65 @@ export const EnhancedTicketCreationForm: React.FC<EnhancedTicketCreationFormProp
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Create Soccer Event Tickets</CardTitle>
-            <p className="text-gray-600">Step {currentStep} of {totalSteps}</p>
+            <CardTitle>
+              {isCompleted ? "Tickets Generated!" : "Create Soccer Event Tickets"}
+            </CardTitle>
+            {!isCompleted && <p className="text-gray-600">Step {currentStep} of {totalSteps}</p>}
           </div>
-          <div className="flex space-x-1">
-            {Array.from({ length: totalSteps }, (_, i) => (
-              <div
-                key={i}
-                className={`w-3 h-3 rounded-full ${
-                  i + 1 <= currentStep ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </div>
+          {!isCompleted && (
+            <div className="flex space-x-1">
+              {Array.from({ length: totalSteps }, (_, i) => (
+                <div
+                  key={i}
+                  className={`w-3 h-3 rounded-full ${
+                    i + 1 <= currentStep ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </CardHeader>
       
       <CardContent>
-        <form onSubmit={onSubmit}>
-          {renderStepContent()}
-          
-          <div className="flex justify-between mt-8">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-              disabled={currentStep === 1}
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
+        {!isCompleted ? (
+          <form onSubmit={onSubmit}>
+            {renderStepContent()}
             
-            {currentStep < totalSteps ? (
+            <div className="flex justify-between mt-8">
               <Button
                 type="button"
-                onClick={() => setCurrentStep(Math.min(totalSteps, currentStep + 1))}
-                disabled={!canProceedToStep(currentStep)}
+                variant="outline"
+                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                disabled={currentStep === 1}
               >
-                Next
-                <ChevronRight className="w-4 h-4 ml-2" />
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Previous
               </Button>
-            ) : (
-              <Button
-                type="submit"
-                disabled={isCreating || !canProceedToStep(currentStep)}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isCreating ? 'Generating Tickets...' : 'Generate Tickets'}
-              </Button>
-            )}
-          </div>
-        </form>
+              
+              {currentStep < totalSteps ? (
+                <Button
+                  type="button"
+                  onClick={() => setCurrentStep(Math.min(totalSteps, currentStep + 1))}
+                  disabled={!canProceedToStep(currentStep)}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={isCreating || !canProceedToStep(currentStep)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isCreating ? 'Generating Tickets...' : 'Generate Tickets'}
+                </Button>
+              )}
+            </div>
+          </form>
+        ) : (
+          renderStepContent()
+        )}
       </CardContent>
     </Card>
   );

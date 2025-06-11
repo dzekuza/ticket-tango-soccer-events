@@ -26,6 +26,7 @@ export const useEnhancedTicketCreation = (onTicketCreated: (ticket: Ticket) => v
     ],
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const { toast } = useToast();
   const { createEnhancedTicketBatch } = useSupabaseTickets();
 
@@ -52,6 +53,7 @@ export const useEnhancedTicketCreation = (onTicketCreated: (ticket: Ticket) => v
         },
       ],
     });
+    setIsCompleted(false);
   };
 
   const validateForm = (): boolean => {
@@ -105,6 +107,12 @@ export const useEnhancedTicketCreation = (onTicketCreated: (ticket: Ticket) => v
       const batchId = `batch_${Date.now()}`;
       const eventTitle = `${formData.homeTeam} vs ${formData.awayTeam}`;
       
+      console.log('Starting enhanced ticket creation with data:', {
+        eventTitle,
+        totalTiers: formData.tiers.length,
+        tiers: formData.tiers.map(t => ({ name: t.tierName, quantity: t.tierQuantity, price: t.tierPrice }))
+      });
+      
       // Prepare tiers data
       const tiers = formData.tiers.map(tier => ({
         tier_name: tier.tierName,
@@ -113,15 +121,18 @@ export const useEnhancedTicketCreation = (onTicketCreated: (ticket: Ticket) => v
         tier_description: tier.tierDescription || null,
       }));
 
-      // Generate individual tickets for each tier
+      // Generate individual tickets for each tier with proper unique IDs
       const individualTickets: IndividualTicket[] = [];
       const individualTicketsForSupabase = [];
 
-      let ticketCounter = 1;
+      let globalTicketCounter = 1;
       
       for (const [tierIndex, tier] of tiers.entries()) {
+        console.log(`Creating ${tier.tier_quantity} tickets for tier ${tierIndex + 1}: ${tier.tier_name}`);
+        
         for (let i = 0; i < tier.tier_quantity; i++) {
-          const ticketId = `${batchId}_ticket_${ticketCounter}`;
+          const ticketId = `${batchId}_ticket_${globalTicketCounter.toString().padStart(4, '0')}`;
+          
           const ticketData = {
             id: ticketId,
             eventTitle,
@@ -132,37 +143,47 @@ export const useEnhancedTicketCreation = (onTicketCreated: (ticket: Ticket) => v
             eventStartTime: formData.eventStartTime,
             tierName: tier.tier_name,
             price: tier.tier_price,
+            ticketNumber: globalTicketCounter,
+            tierIndex: tierIndex,
           };
           
-          // Generate QR code image
+          console.log(`Generating QR code for ticket ${globalTicketCounter}`);
+          
+          // Generate unique QR code image for each ticket
           const qrCodeImage = await generateQRCodeImage(ticketData);
           
+          const qrCodeData = {
+            ...ticketData,
+            timestamp: Date.now(),
+            checksum: btoa(`${ticketId}_${eventTitle}_${Date.now()}`).slice(0, 8)
+          };
+
           const individualTicket = {
             id: ticketId,
-            qrCode: JSON.stringify({
-              ...ticketData,
-              timestamp: Date.now(),
-              checksum: btoa(`${ticketId}_${eventTitle}_${Date.now()}`).slice(0, 8)
-            }),
+            qrCode: JSON.stringify(qrCodeData),
             qrCodeImage: qrCodeImage,
             eventTitle,
             price: tier.tier_price,
             isUsed: false,
+            tierName: tier.tier_name,
+            ticketNumber: globalTicketCounter,
           };
 
           individualTickets.push(individualTicket);
           
           individualTicketsForSupabase.push({
             ...individualTicket,
-            tierId: `tier_${tierIndex}`, // This will be replaced with actual tier ID after creation
+            tierId: `tier_${tierIndex}`, // Will be replaced with actual tier ID
             seatSection: null,
             seatRow: null,
-            seatNumber: null,
+            seatNumber: globalTicketCounter.toString(),
           });
 
-          ticketCounter++;
+          globalTicketCounter++;
         }
       }
+
+      console.log(`Generated ${individualTickets.length} individual tickets`);
 
       const eventData = {
         eventTitle,
@@ -177,6 +198,7 @@ export const useEnhancedTicketCreation = (onTicketCreated: (ticket: Ticket) => v
       };
 
       // Create enhanced ticket batch
+      console.log('Creating ticket batch in database...');
       const result = await createEnhancedTicketBatch(
         eventData,
         tiers,
@@ -195,22 +217,32 @@ export const useEnhancedTicketCreation = (onTicketCreated: (ticket: Ticket) => v
           quantity: totalQuantity,
           createdAt: new Date(),
           tickets: individualTickets,
+          // Enhanced fields
+          eventDate: formData.eventDate,
+          eventStartTime: formData.eventStartTime,
+          eventEndTime: formData.eventEndTime,
+          homeTeam: formData.homeTeam,
+          awayTeam: formData.awayTeam,
+          stadiumName: formData.stadiumName,
+          competition: formData.competition,
         };
 
         onTicketCreated(newTicket);
+        setIsCompleted(true);
         
         toast({
           title: "Success!",
-          description: `Created ${totalQuantity} tickets for ${eventTitle}`,
+          description: `Created ${totalQuantity} tickets for ${eventTitle}. PDF generation in progress...`,
         });
 
-        resetForm();
+      } else {
+        throw new Error('Failed to create ticket batch');
       }
     } catch (error) {
       console.error('Enhanced ticket creation error:', error);
       toast({
         title: "Error",
-        description: "Failed to create tickets. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create tickets. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -221,7 +253,9 @@ export const useEnhancedTicketCreation = (onTicketCreated: (ticket: Ticket) => v
   return {
     formData,
     isCreating,
+    isCompleted,
     handleInputChange,
     createTickets,
+    resetForm,
   };
 };

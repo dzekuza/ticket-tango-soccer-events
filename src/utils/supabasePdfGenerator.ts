@@ -38,8 +38,23 @@ export const generateAndUploadTicketPDF = async (
     console.log('Ticket batch info:', {
       id: ticketBatch.id,
       title: ticketBatch.eventTitle,
-      ticketCount: tickets.length
+      ticketCount: tickets.length,
+      hasEnhancedData: !!(ticketBatch.homeTeam && ticketBatch.awayTeam)
     });
+
+    // Validate each ticket has required data
+    const validTickets = tickets.filter(ticket => {
+      const isValid = ticket.id && ticket.eventTitle && typeof ticket.price === 'number';
+      if (!isValid) {
+        console.warn('Invalid ticket found:', ticket);
+      }
+      return isValid;
+    });
+
+    if (validTickets.length !== tickets.length) {
+      console.error(`${tickets.length - validTickets.length} invalid tickets found`);
+      throw new Error(`Found ${tickets.length - validTickets.length} invalid tickets`);
+    }
 
     // Create a temporary container for rendering
     const container = document.createElement('div');
@@ -51,17 +66,18 @@ export const generateAndUploadTicketPDF = async (
     container.style.background = 'white';
     document.body.appendChild(container);
 
-    // Generate HTML content for all tickets
-    const ticketsHtml = tickets.map((ticket, index) => 
-      createTicketHTML(ticket, ticketBatch, index < tickets.length - 1)
-    ).join('');
+    // Generate HTML content for all tickets with page breaks
+    const ticketsHtml = validTickets.map((ticket, index) => {
+      const addPageBreak = index < validTickets.length - 1;
+      return createTicketHTML(ticket, ticketBatch, addPageBreak);
+    }).join('');
 
     container.innerHTML = ticketsHtml;
 
     // Apply all styles inline for PDF compatibility
     await applyInlineStyles(container);
 
-    // Configure PDF options
+    // Configure PDF options for better quality and handling of multiple pages
     const pdfOptions = {
       margin: [10, 10, 10, 10],
       filename: `${ticketBatch.eventTitle.replace(/[^a-zA-Z0-9]/g, '_')}_tickets.pdf`,
@@ -72,13 +88,17 @@ export const generateAndUploadTicketPDF = async (
         letterRendering: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        width: 794, // A4 width in pixels at 96 DPI
+        height: 1123 // A4 height in pixels at 96 DPI
       },
       jsPDF: { 
         unit: 'mm', 
         format: 'a4', 
-        orientation: 'portrait' 
-      }
+        orientation: 'portrait',
+        compress: true
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     console.log('Generating PDF with options:', pdfOptions);
@@ -86,7 +106,7 @@ export const generateAndUploadTicketPDF = async (
     // Generate PDF blob
     const pdfBlob = await html2pdf().set(pdfOptions).from(container).outputPdf('blob');
     
-    console.log('PDF blob generated, size:', pdfBlob.size);
+    console.log('PDF blob generated, size:', pdfBlob.size, 'bytes');
 
     // Clean up DOM
     document.body.removeChild(container);
@@ -149,6 +169,14 @@ const createTicketHTML = (
   const isUsed = ticket?.isUsed ?? false;
   const qrCodeImage = ticket?.qrCodeImage;
   const validatedAt = ticket?.validatedAt;
+  const tierName = (ticket as any)?.tierName || 'Standard';
+  const ticketNumber = (ticket as any)?.ticketNumber || ticketId.split('_').pop();
+
+  // Enhanced event data
+  const isEnhancedTicket = !!(ticketBatch.homeTeam && ticketBatch.awayTeam);
+  const eventTitle = isEnhancedTicket 
+    ? `${ticketBatch.homeTeam} vs ${ticketBatch.awayTeam}`
+    : ticketBatch.eventTitle;
 
   return `
     <div style="
@@ -157,6 +185,8 @@ const createTicketHTML = (
       margin: 0 auto;
       max-width: 600px;
       font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      box-sizing: border-box;
     ">
       <div style="
         background: white;
@@ -164,6 +194,8 @@ const createTicketHTML = (
         border-radius: 8px;
         padding: 24px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        height: auto;
+        min-height: 400px;
       ">
         <!-- Header -->
         <div style="
@@ -181,7 +213,15 @@ const createTicketHTML = (
               color: #111827;
               margin: 0 0 8px 0;
               line-height: 1.2;
-            ">${ticketBatch.eventTitle || 'Event'}</h1>
+            ">${eventTitle}</h1>
+            ${ticketBatch.competition ? `
+              <p style="
+                color: #3b82f6;
+                font-size: 14px;
+                font-weight: 600;
+                margin: 0 0 4px 0;
+              ">${ticketBatch.competition}</p>
+            ` : ''}
             ${ticketBatch.description ? `
               <p style="
                 color: #6b7280;
@@ -203,6 +243,15 @@ const createTicketHTML = (
               color: #6b7280;
               margin-top: 4px;
             ">TICKET PRICE</div>
+            ${tierName !== 'Standard' ? `
+              <div style="
+                font-size: 10px;
+                color: #7c3aed;
+                font-weight: 600;
+                margin-top: 4px;
+                text-transform: uppercase;
+              ">${tierName}</div>
+            ` : ''}
           </div>
         </div>
 
@@ -216,7 +265,6 @@ const createTicketHTML = (
         ">
           <!-- Event Details -->
           <div>
-            <!-- Enhanced event details for soccer matches -->
             ${ticketBatch.eventDate ? `
               <div style="margin-bottom: 12px;">
                 <div style="
@@ -279,7 +327,7 @@ const createTicketHTML = (
                 align-items: center;
               ">
                 <span style="margin-right: 8px;">🎫</span>
-                Ticket ID: ${ticketId.split('_').pop() || ticketId}
+                Ticket #${ticketNumber}
               </div>
             </div>
             <div>
@@ -386,12 +434,12 @@ const applyInlineStyles = async (container: HTMLElement): Promise<void> => {
     const importantStyles = [
       'font-family', 'font-size', 'font-weight', 'color', 'background-color',
       'padding', 'margin', 'border', 'border-radius', 'display', 'flex-direction',
-      'justify-content', 'align-items', 'text-align', 'line-height'
+      'justify-content', 'align-items', 'text-align', 'line-height', 'width', 'height'
     ];
     
     importantStyles.forEach(prop => {
       const value = computedStyles.getPropertyValue(prop);
-      if (value) {
+      if (value && value !== 'auto' && value !== 'normal') {
         inlineStyles.push(`${prop}: ${value}`);
       }
     });
