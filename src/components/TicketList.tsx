@@ -1,12 +1,14 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, QrCode, Calendar } from 'lucide-react';
+import { Download, QrCode, Calendar, FileText } from 'lucide-react';
 import { Ticket } from './Dashboard';
 import { useToast } from '@/hooks/use-toast';
 import { TicketPreview } from './TicketPreview';
 import { TicketPDFGenerator } from './TicketPDFGenerator';
+import { useSupabaseTickets } from '@/hooks/useSupabaseTickets';
 
 interface TicketListProps {
   tickets: Ticket[];
@@ -14,6 +16,7 @@ interface TicketListProps {
 
 export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
   const { toast } = useToast();
+  const { tickets: supabaseTickets } = useSupabaseTickets();
 
   const handleExportTickets = (ticket: Ticket) => {
     // Create a simple CSV export for WordPress upload
@@ -44,6 +47,10 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
     return ticket.tickets.filter(t => t.isUsed).length;
   };
 
+  const getSupabaseTicket = (ticketId: string) => {
+    return supabaseTickets.find(t => t.id === ticketId);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,64 +68,93 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {tickets.map((ticket) => (
-            <Card key={ticket.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-xl">{ticket.eventTitle}</CardTitle>
-                    <p className="text-gray-600 mt-1">{ticket.description}</p>
+          {tickets.map((ticket) => {
+            const supabaseTicket = getSupabaseTicket(ticket.id);
+            const hasPDF = !!supabaseTicket?.pdf_url;
+            
+            return (
+              <Card key={ticket.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-xl">{ticket.eventTitle}</CardTitle>
+                      <p className="text-gray-600 mt-1">{ticket.description}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary">
+                        {ticket.quantity} tickets
+                      </Badge>
+                      {hasPDF && (
+                        <Badge variant="outline" className="text-green-600 border-green-600">
+                          <FileText className="w-3 h-3 mr-1" />
+                          PDF Ready
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <Badge variant="secondary" className="ml-4">
-                    {ticket.quantity} tickets
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Price</p>
-                    <p className="text-lg font-bold text-gray-900">${ticket.price}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Price</p>
+                      <p className="text-lg font-bold text-gray-900">${ticket.price}</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Total Revenue</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        ${(ticket.price * ticket.quantity).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Validated</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {getValidatedCount(ticket)} / {ticket.quantity}
+                      </p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Created</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {ticket.createdAt.toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Total Revenue</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      ${(ticket.price * ticket.quantity).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Validated</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {getValidatedCount(ticket)} / {ticket.quantity}
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Created</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {ticket.createdAt.toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <TicketPreview ticket={ticket} />
-                  <TicketPDFGenerator ticket={ticket} />
-                  <Button 
-                    onClick={() => handleExportTickets(ticket)}
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Export CSV</span>
-                  </Button>
-                  <Button variant="outline" className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>View Details</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex flex-wrap gap-3">
+                    <TicketPreview ticket={ticket} />
+                    
+                    {hasPDF ? (
+                      <>
+                        <TicketPDFGenerator 
+                          ticket={ticket} 
+                          supabaseTicket={supabaseTicket}
+                          variant="download"
+                        />
+                        <TicketPDFGenerator 
+                          ticket={ticket} 
+                          variant="regenerate"
+                        />
+                      </>
+                    ) : (
+                      <TicketPDFGenerator ticket={ticket} />
+                    )}
+                    
+                    <Button 
+                      onClick={() => handleExportTickets(ticket)}
+                      variant="outline"
+                      className="flex items-center space-x-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Export CSV</span>
+                    </Button>
+                    <Button variant="outline" className="flex items-center space-x-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>View Details</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

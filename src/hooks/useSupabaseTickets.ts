@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { generateAndUploadTicketPDF } from '@/utils/supabasePdfGenerator';
 
 export interface SupabaseTicket {
   id: string;
@@ -94,6 +94,40 @@ export const useSupabaseTickets = () => {
 
       if (ticketsError) throw ticketsError;
 
+      // Generate and upload PDF
+      const pdfResult = await generateAndUploadTicketPDF(
+        individualTickets,
+        {
+          id: ticketBatch.id,
+          eventTitle,
+          description: description || '',
+          price,
+          quantity,
+          createdAt: new Date(ticketBatch.created_at),
+          tickets: individualTickets
+        },
+        user.id
+      );
+
+      // Update ticket batch with PDF URL if successful
+      if (pdfResult.success && pdfResult.pdfUrl) {
+        const { error: updateError } = await supabase
+          .from('tickets')
+          .update({ pdf_url: pdfResult.pdfUrl })
+          .eq('id', ticketBatch.id);
+
+        if (updateError) {
+          console.error('Failed to update PDF URL:', updateError);
+        }
+      } else if (pdfResult.error) {
+        console.error('PDF generation failed:', pdfResult.error);
+        toast({
+          title: "Warning",
+          description: "Tickets created successfully, but PDF generation failed. You can regenerate it later.",
+          variant: "destructive",
+        });
+      }
+
       await fetchTickets();
       return ticketBatch;
     } catch (error) {
@@ -129,6 +163,70 @@ export const useSupabaseTickets = () => {
     }
   };
 
+  const regeneratePDF = async (ticketId: string) => {
+    if (!user) return false;
+
+    try {
+      // Find the ticket batch and its individual tickets
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+
+      // Generate and upload PDF
+      const pdfResult = await generateAndUploadTicketPDF(
+        ticket.individual_tickets.map(it => ({
+          id: it.id,
+          qrCode: it.qr_code,
+          qrCodeImage: it.qr_code_image,
+          eventTitle: ticket.event_title,
+          price: ticket.price,
+          isUsed: it.is_used,
+          validatedAt: it.validated_at ? new Date(it.validated_at) : undefined,
+        })),
+        {
+          id: ticket.id,
+          eventTitle: ticket.event_title,
+          description: ticket.description || '',
+          price: ticket.price,
+          quantity: ticket.quantity,
+          createdAt: new Date(ticket.created_at),
+          tickets: []
+        },
+        user.id
+      );
+
+      if (pdfResult.success && pdfResult.pdfUrl) {
+        // Update ticket batch with new PDF URL
+        const { error: updateError } = await supabase
+          .from('tickets')
+          .update({ pdf_url: pdfResult.pdfUrl })
+          .eq('id', ticketId);
+
+        if (updateError) throw updateError;
+
+        await fetchTickets();
+        
+        toast({
+          title: "Success",
+          description: "PDF regenerated successfully",
+        });
+        
+        return true;
+      } else {
+        throw new Error(pdfResult.error || 'PDF generation failed');
+      }
+    } catch (error) {
+      console.error('Error regenerating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to regenerate PDF",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchTickets();
   }, [user]);
@@ -138,6 +236,7 @@ export const useSupabaseTickets = () => {
     loading,
     createTicketBatch,
     validateTicket,
+    regeneratePDF,
     refetch: fetchTickets,
   };
 };
