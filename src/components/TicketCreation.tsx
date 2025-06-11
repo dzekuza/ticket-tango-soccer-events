@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Ticket as TicketIcon } from 'lucide-react';
 import { Ticket, IndividualTicket } from './Dashboard';
 import { useToast } from '@/hooks/use-toast';
+import QRCode from 'qrcode';
 
 interface TicketCreationProps {
   onTicketCreated: (ticket: Ticket) => void;
@@ -23,9 +24,32 @@ export const TicketCreation: React.FC<TicketCreationProps> = ({ onTicketCreated 
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
 
-  const generateQRCode = (ticketId: string): string => {
-    // Generate a simple QR code data string
-    return `TICKET_${ticketId}_${Date.now()}`;
+  const generateQRCodeImage = async (ticketData: any): Promise<string> => {
+    try {
+      // Create structured ticket data with security features
+      const qrData = {
+        ticketId: ticketData.id,
+        eventTitle: ticketData.eventTitle,
+        price: ticketData.price,
+        timestamp: Date.now(),
+        checksum: btoa(`${ticketData.id}_${ticketData.eventTitle}_${Date.now()}`).slice(0, 8)
+      };
+      
+      // Generate QR code as data URL
+      const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(qrData), {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      return qrCodeDataURL;
+    } catch (error) {
+      console.error('Failed to generate QR code:', error);
+      return '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,9 +76,25 @@ export const TicketCreation: React.FC<TicketCreationProps> = ({ onTicketCreated 
       // Generate individual tickets with QR codes
       for (let i = 0; i < quantity; i++) {
         const ticketId = `${batchId}_ticket_${i + 1}`;
+        const ticketData = {
+          id: ticketId,
+          eventTitle: formData.eventTitle,
+          price: price,
+        };
+        
+        // Generate QR code image
+        const qrCodeImage = await generateQRCodeImage(ticketData);
+        
         individualTickets.push({
           id: ticketId,
-          qrCode: generateQRCode(ticketId),
+          qrCode: JSON.stringify({
+            ticketId,
+            eventTitle: formData.eventTitle,
+            price,
+            timestamp: Date.now(),
+            checksum: btoa(`${ticketId}_${formData.eventTitle}_${Date.now()}`).slice(0, 8)
+          }),
+          qrCodeImage: qrCodeImage,
           eventTitle: formData.eventTitle,
           price: price,
           isUsed: false,

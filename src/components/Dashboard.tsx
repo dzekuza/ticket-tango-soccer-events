@@ -19,6 +19,7 @@ export interface Ticket {
 export interface IndividualTicket {
   id: string;
   qrCode: string;
+  qrCodeImage?: string;
   eventTitle: string;
   price: number;
   isUsed: boolean;
