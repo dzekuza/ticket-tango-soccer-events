@@ -1,8 +1,8 @@
 
-import Dashboard from '../components/Dashboard';
+import { AppWrapper } from "@/components/AppWrapper";
 
 const Index = () => {
-  return <Dashboard />;
+  return <AppWrapper />;
 };
 
 export default Index;

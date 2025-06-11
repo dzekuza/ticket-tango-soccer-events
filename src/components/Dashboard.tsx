@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
@@ -9,7 +8,9 @@ import { TicketCreation } from './TicketCreation';
 import { TicketList } from './TicketList';
 import { TicketScanner } from './TicketScanner';
 import { DashboardOverview } from './DashboardOverview';
+import { useSupabaseTickets } from '@/hooks/useSupabaseTickets';
 
+// Keep legacy interfaces for compatibility
 export interface Ticket {
   id: string;
   eventTitle: string;
@@ -32,25 +33,54 @@ export interface IndividualTicket {
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [tickets, setTickets] = useState<Ticket[]>([]);
   const isMobile = useIsMobile();
+  const { tickets: supabaseTickets, loading, createTicketBatch, validateTicket } = useSupabaseTickets();
 
-  const addTicketBatch = (newTicket: Ticket) => {
-    setTickets(prev => [...prev, newTicket]);
+  // Convert Supabase tickets to legacy format for existing components
+  const tickets: Ticket[] = supabaseTickets.map(ticket => ({
+    id: ticket.id,
+    eventTitle: ticket.event_title,
+    description: ticket.description || '',
+    price: ticket.price,
+    quantity: ticket.quantity,
+    createdAt: new Date(ticket.created_at),
+    tickets: ticket.individual_tickets.map(individualTicket => ({
+      id: individualTicket.id,
+      qrCode: individualTicket.qr_code,
+      qrCodeImage: individualTicket.qr_code_image,
+      eventTitle: ticket.event_title,
+      price: ticket.price,
+      isUsed: individualTicket.is_used,
+      validatedAt: individualTicket.validated_at ? new Date(individualTicket.validated_at) : undefined,
+    }))
+  }));
+
+  const addTicketBatch = async (newTicket: Ticket) => {
+    await createTicketBatch(
+      newTicket.eventTitle,
+      newTicket.description,
+      newTicket.price,
+      newTicket.quantity,
+      newTicket.tickets
+    );
   };
 
-  const validateTicket = (ticketId: string) => {
-    setTickets(prev => prev.map(batch => ({
-      ...batch,
-      tickets: batch.tickets.map(ticket => 
-        ticket.id === ticketId 
-          ? { ...ticket, isUsed: true, validatedAt: new Date() }
-          : ticket
-      )
-    })));
+  const handleValidateTicket = async (ticketId: string) => {
+    await validateTicket(ticketId);
   };
 
   const renderActiveComponent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading tickets...</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'overview':
         return <DashboardOverview tickets={tickets} />;
@@ -59,7 +89,7 @@ const Dashboard = () => {
       case 'manage':
         return <TicketList tickets={tickets} />;
       case 'scanner':
-        return <TicketScanner tickets={tickets} onValidate={validateTicket} />;
+        return <TicketScanner tickets={tickets} onValidate={handleValidateTicket} />;
       default:
         return <DashboardOverview tickets={tickets} />;
     }
