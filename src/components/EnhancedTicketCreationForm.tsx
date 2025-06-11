@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, CheckCircle, ArrowRight } from 'lucide-react';
 import { EnhancedTicketFormData } from '@/types/ticket';
 import { TicketCreationProgress } from './TicketCreationProgress';
-import { TicketProgress } from '@/hooks/useIndividualTicketCreation';
+import { TicketProgress } from '@/types/ticketCreation';
 
 interface EnhancedTicketCreationFormProps {
   formData: EnhancedTicketFormData;
