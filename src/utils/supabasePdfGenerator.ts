@@ -1,4 +1,3 @@
-
 import ReactDOMServer from 'react-dom/server';
 import html2pdf from 'html2pdf.js';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,27 +14,31 @@ export const generateAndUploadTicketPDF = async (
   ticketBatch: Ticket,
   userId: string
 ): Promise<PDFGenerationResult> => {
-  console.log('Starting PDF generation for tickets:', tickets.length);
+  console.log('🚀 Starting PDF generation for tickets:', {
+    ticketCount: tickets.length,
+    batchId: ticketBatch.id,
+    userId: userId.substring(0, 8) + '...'
+  });
   
   try {
-    // Enhanced validation
+    // Enhanced validation with detailed logging
     if (!tickets || tickets.length === 0) {
-      console.error('No tickets provided for PDF generation');
+      console.error('❌ No tickets provided for PDF generation');
       throw new Error('No tickets provided for PDF generation');
     }
 
     if (!userId) {
-      console.error('User ID is required for PDF upload');
+      console.error('❌ User ID is required for PDF upload');
       throw new Error('User ID is required for PDF upload');
     }
 
     if (!ticketBatch) {
-      console.error('Ticket batch information is required');
+      console.error('❌ Ticket batch information is required');
       throw new Error('Ticket batch information is required');
     }
 
-    console.log('Validation passed, proceeding with PDF generation');
-    console.log('Ticket batch info:', {
+    console.log('✅ Validation passed, proceeding with PDF generation');
+    console.log('📊 Ticket batch info:', {
       id: ticketBatch.id,
       title: ticketBatch.eventTitle,
       ticketCount: tickets.length,
@@ -46,15 +49,17 @@ export const generateAndUploadTicketPDF = async (
     const validTickets = tickets.filter(ticket => {
       const isValid = ticket.id && ticket.eventTitle && typeof ticket.price === 'number';
       if (!isValid) {
-        console.warn('Invalid ticket found:', ticket);
+        console.warn('⚠️ Invalid ticket found:', ticket);
       }
       return isValid;
     });
 
     if (validTickets.length !== tickets.length) {
-      console.error(`${tickets.length - validTickets.length} invalid tickets found`);
+      console.error(`❌ ${tickets.length - validTickets.length} invalid tickets found`);
       throw new Error(`Found ${tickets.length - validTickets.length} invalid tickets`);
     }
+
+    console.log('🎯 All tickets validated successfully');
 
     // Create a temporary container for rendering
     const container = document.createElement('div');
@@ -67,6 +72,7 @@ export const generateAndUploadTicketPDF = async (
     document.body.appendChild(container);
 
     // Generate HTML content for all tickets with page breaks
+    console.log('🎨 Generating HTML content...');
     const ticketsHtml = validTickets.map((ticket, index) => {
       const addPageBreak = index < validTickets.length - 1;
       return createTicketHTML(ticket, ticketBatch, addPageBreak);
@@ -75,6 +81,7 @@ export const generateAndUploadTicketPDF = async (
     container.innerHTML = ticketsHtml;
 
     // Apply all styles inline for PDF compatibility
+    console.log('🎨 Applying inline styles...');
     await applyInlineStyles(container);
 
     // Configure PDF options for better quality and handling of multiple pages
@@ -101,12 +108,18 @@ export const generateAndUploadTicketPDF = async (
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    console.log('Generating PDF with options:', pdfOptions);
+    console.log('📄 Generating PDF with enhanced options...');
 
-    // Generate PDF blob
-    const pdfBlob = await html2pdf().set(pdfOptions).from(container).outputPdf('blob');
+    // Generate PDF blob with better error handling
+    let pdfBlob;
+    try {
+      pdfBlob = await html2pdf().set(pdfOptions).from(container).outputPdf('blob');
+    } catch (pdfError) {
+      console.error('❌ PDF generation failed:', pdfError);
+      throw new Error(`PDF generation failed: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`);
+    }
     
-    console.log('PDF blob generated, size:', pdfBlob.size, 'bytes');
+    console.log('✅ PDF blob generated successfully, size:', pdfBlob.size, 'bytes');
 
     // Clean up DOM
     document.body.removeChild(container);
@@ -115,23 +128,44 @@ export const generateAndUploadTicketPDF = async (
       throw new Error('Generated PDF is empty or invalid');
     }
 
-    // Upload to Supabase storage
+    // Upload to Supabase storage with retry logic
     const fileName = `${userId}/${ticketBatch.id}_${Date.now()}.pdf`;
-    console.log('Uploading PDF to storage path:', fileName);
+    console.log('☁️ Uploading PDF to storage path:', fileName);
 
-    const { data, error } = await supabase.storage
-      .from('tickets')
-      .upload(fileName, pdfBlob, {
-        contentType: 'application/pdf',
-        upsert: true
-      });
+    let uploadAttempts = 0;
+    const maxAttempts = 3;
+    
+    while (uploadAttempts < maxAttempts) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('tickets')
+          .upload(fileName, pdfBlob, {
+            contentType: 'application/pdf',
+            upsert: true
+          });
 
-    if (error) {
-      console.error('Storage upload error:', error);
-      throw new Error(`Storage upload failed: ${error.message}`);
+        if (error) {
+          console.error(`❌ Storage upload attempt ${uploadAttempts + 1} failed:`, error);
+          uploadAttempts++;
+          if (uploadAttempts >= maxAttempts) {
+            throw new Error(`Storage upload failed after ${maxAttempts} attempts: ${error.message}`);
+          }
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts));
+          continue;
+        }
+
+        console.log('✅ PDF uploaded successfully:', data);
+        break;
+      } catch (uploadError) {
+        console.error(`❌ Upload attempt ${uploadAttempts + 1} error:`, uploadError);
+        uploadAttempts++;
+        if (uploadAttempts >= maxAttempts) {
+          throw uploadError;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts));
+      }
     }
-
-    console.log('PDF uploaded successfully:', data);
 
     // Get public URL
     const { data: urlData } = supabase.storage
@@ -142,7 +176,7 @@ export const generateAndUploadTicketPDF = async (
       throw new Error('Failed to get public URL for uploaded PDF');
     }
 
-    console.log('PDF public URL generated:', urlData.publicUrl);
+    console.log('✅ PDF public URL generated:', urlData.publicUrl);
 
     return {
       success: true,
@@ -150,7 +184,7 @@ export const generateAndUploadTicketPDF = async (
     };
 
   } catch (error) {
-    console.error('PDF generation and upload failed:', error);
+    console.error('❌ PDF generation and upload failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred during PDF generation'

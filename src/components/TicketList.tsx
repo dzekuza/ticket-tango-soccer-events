@@ -15,10 +15,9 @@ import {
 } from "@/components/ui/accordion"
 import { TicketDetailsDialog } from './TicketDetailsDialog';
 import { DeleteTicketDialog } from './DeleteTicketDialog';
+import { TicketPDFActions } from './TicketPDFActions';
 import { useSupabaseTickets } from '@/hooks/useSupabaseTickets';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
 import { SupabaseTicket } from '@/hooks/useTicketData';
 
 export interface Ticket {
@@ -98,12 +97,6 @@ export const TicketList: React.FC = () => {
     refetch();
   };
 
-  const handleDownloadPDF = (ticket: Ticket) => {
-    if (ticket.pdfUrl) {
-      window.open(ticket.pdfUrl, '_blank');
-    }
-  };
-
   if (loading) {
     return <div>Loading tickets...</div>;
   }
@@ -124,7 +117,7 @@ export const TicketList: React.FC = () => {
                 <CardTitle>{ticket.eventTitle}</CardTitle>
                 <CardDescription>{ticket.description}</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Price</p>
                   <p>${ticket.price.toFixed(2)}</p>
@@ -138,24 +131,27 @@ export const TicketList: React.FC = () => {
                   <p>{new Date(ticket.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">PDF</p>
+                  <p className="text-sm font-medium text-gray-600">PDF Status</p>
                   {ticket.pdfUrl ? (
-                    <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(ticket)} className="flex items-center space-x-2">
-                      <Download className="w-4 h-4" />
-                      <span>Download PDF</span>
-                    </Button>
+                    <span className="text-green-600 font-medium">Available</span>
                   ) : (
-                    <span className="text-gray-400">No PDF available</span>
+                    <span className="text-amber-600 font-medium">Missing - Click Generate</span>
                   )}
                 </div>
               </CardContent>
-              <div className="flex justify-end space-x-2 p-4">
-                <TicketDetailsDialog ticket={ticket}>
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
-                </TicketDetailsDialog>
-                <DeleteTicketDialog ticket={ticket} onTicketDeleted={handleTicketDeleted} />
+              <div className="p-4 space-y-4">
+                <TicketPDFActions 
+                  ticket={tickets.find(t => t.id === ticket.id)!} 
+                  refetchTickets={refetch} 
+                />
+                <div className="flex justify-end space-x-2">
+                  <TicketDetailsDialog ticket={ticket}>
+                    <Button variant="outline" size="sm">
+                      View Details
+                    </Button>
+                  </TicketDetailsDialog>
+                  <DeleteTicketDialog ticket={ticket} onTicketDeleted={handleTicketDeleted} />
+                </div>
               </div>
             </Card>
           </AccordionContent>
