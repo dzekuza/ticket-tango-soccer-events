@@ -15,7 +15,7 @@ export const ScanResult: React.FC<ScanResultProps> = ({ ticket }) => {
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-medium">{ticket.eventTitle}</h3>
+            <h3 className="font-medium">{ticket.eventTitle || 'Event'}</h3>
             <p className="text-sm text-gray-600">Price: ${ticket.price}</p>
             <p className="text-sm text-gray-600">Ticket ID: {ticket.id}</p>
           </div>
@@ -33,7 +33,7 @@ export const ScanResult: React.FC<ScanResultProps> = ({ ticket }) => {
         </div>
         {ticket.validatedAt && (
           <p className="text-xs text-gray-500 mt-2">
-            Validated: {ticket.validatedAt.toLocaleString()}
+            Validated: {new Date(ticket.validatedAt).toLocaleString()}
           </p>
         )}
       </CardContent>

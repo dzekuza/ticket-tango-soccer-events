@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -41,6 +42,9 @@ export interface SupabaseIndividualTicket {
   seat_section?: string;
   seat_row?: string;
   seat_number?: string;
+  tier_price?: number;
+  tier_name?: string;
+  ticket_number?: number;
 }
 
 export const useTicketData = () => {

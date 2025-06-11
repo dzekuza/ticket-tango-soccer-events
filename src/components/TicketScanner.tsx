@@ -49,7 +49,7 @@ export const TicketScanner: React.FC<TicketScannerProps> = ({ tickets, onValidat
     if (ticket.isUsed) {
       toast({
         title: "Already Used",
-        description: `This ticket was already validated on ${ticket.validatedAt?.toLocaleString()}`,
+        description: `This ticket was already validated on ${ticket.validatedAt ? new Date(ticket.validatedAt).toLocaleString() : 'unknown date'}`,
         variant: "destructive",
       });
       setLastScannedTicket(ticket);
@@ -58,11 +58,11 @@ export const TicketScanner: React.FC<TicketScannerProps> = ({ tickets, onValidat
 
     // Validate the ticket
     onValidate(ticket.id);
-    setLastScannedTicket({ ...ticket, isUsed: true, validatedAt: new Date() });
+    setLastScannedTicket({ ...ticket, isUsed: true, validatedAt: new Date().toISOString() });
     
     toast({
       title: "Ticket Validated",
-      description: `Valid ticket for ${ticket.eventTitle}`,
+      description: `Valid ticket for ${ticket.eventTitle || 'event'}`,
     });
   };
 

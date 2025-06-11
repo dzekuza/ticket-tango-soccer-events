@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export interface Ticket {
@@ -9,12 +10,20 @@ export interface Ticket {
   pdfUrl?: string;
   createdAt: string;
   tickets: IndividualTicket[];
+  // Enhanced event properties
+  eventDate?: string;
+  eventStartTime?: string;
+  eventEndTime?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  stadiumName?: string;
+  competition?: string;
 }
 
 export interface IndividualTicket {
   id: string;
   qrCode: string;
-  qrCodeImage?: string; // Add this field
+  qrCodeImage?: string;
   isUsed: boolean;
   validatedAt?: string;
   price: number;
@@ -23,4 +32,17 @@ export interface IndividualTicket {
   seatSection?: string;
   seatRow?: string;
   seatNumber?: string;
+  eventTitle?: string; // Add this property for compatibility
 }
+
+// Create a default Dashboard component
+const Dashboard: React.FC = () => {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <p>Dashboard component content goes here</p>
+    </div>
+  );
+};
+
+export default Dashboard;

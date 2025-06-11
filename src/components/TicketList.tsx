@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Card,
@@ -18,8 +19,6 @@ import { useSupabaseTickets } from '@/hooks/useSupabaseTickets';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-import { generatePDF } from '@/utils/pdfGenerator';
-import { saveAs } from 'file-saver';
 import { SupabaseTicket } from '@/hooks/useTicketData';
 
 export interface Ticket {
@@ -31,12 +30,20 @@ export interface Ticket {
   pdfUrl?: string;
   createdAt: string;
   tickets: IndividualTicket[];
+  // Enhanced event properties
+  eventDate?: string;
+  eventStartTime?: string;
+  eventEndTime?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  stadiumName?: string;
+  competition?: string;
 }
 
 export interface IndividualTicket {
   id: string;
   qrCode: string;
-  qrCodeImage?: string; // Add this field
+  qrCodeImage?: string;
   isUsed: boolean;
   validatedAt?: string;
   price: number;
@@ -45,6 +52,7 @@ export interface IndividualTicket {
   seatSection?: string;
   seatRow?: string;
   seatNumber?: string;
+  eventTitle?: string;
 }
 
 export const TicketList: React.FC = () => {
@@ -59,6 +67,14 @@ export const TicketList: React.FC = () => {
       quantity: ticket.quantity,
       pdfUrl: ticket.pdf_url,
       createdAt: ticket.created_at,
+      // Enhanced properties
+      eventDate: ticket.event_date,
+      eventStartTime: ticket.event_start_time,
+      eventEndTime: ticket.event_end_time,
+      homeTeam: ticket.home_team,
+      awayTeam: ticket.away_team,
+      stadiumName: ticket.stadium_name,
+      competition: ticket.competition,
       tickets: ticket.individual_tickets.map(individualTicket => ({
         id: individualTicket.id,
         qrCode: individualTicket.qr_code,
@@ -71,6 +87,7 @@ export const TicketList: React.FC = () => {
         seatSection: individualTicket.seat_section,
         seatRow: individualTicket.seat_row,
         seatNumber: individualTicket.seat_number,
+        eventTitle: ticket.event_title,
       }))
     }));
   };
@@ -81,12 +98,9 @@ export const TicketList: React.FC = () => {
     refetch();
   };
 
-  const handleDownloadPDF = async (ticket: Ticket) => {
-    try {
-      const pdfBlob = await generatePDF(ticket);
-      saveAs(pdfBlob, `${ticket.eventTitle.replace(/\s+/g, '_').toLowerCase()}_tickets.pdf`);
-    } catch (error) {
-      console.error('Error generating or downloading PDF:', error);
+  const handleDownloadPDF = (ticket: Ticket) => {
+    if (ticket.pdfUrl) {
+      window.open(ticket.pdfUrl, '_blank');
     }
   };
 
@@ -126,14 +140,12 @@ export const TicketList: React.FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-600">PDF</p>
                   {ticket.pdfUrl ? (
-                    <a href={ticket.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                      View PDF
-                    </a>
-                  ) : (
                     <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(ticket)} className="flex items-center space-x-2">
                       <Download className="w-4 h-4" />
                       <span>Download PDF</span>
                     </Button>
+                  ) : (
+                    <span className="text-gray-400">No PDF available</span>
                   )}
                 </div>
               </CardContent>
