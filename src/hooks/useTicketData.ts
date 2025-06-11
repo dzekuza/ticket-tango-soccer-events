@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -58,7 +57,20 @@ export const useTicketData = () => {
         .from('tickets')
         .select(`
           *,
-          individual_tickets (*),
+          individual_tickets (
+            id,
+            qr_code,
+            qr_code_image,
+            is_used,
+            validated_at,
+            tier_id,
+            seat_section,
+            seat_row,
+            seat_number,
+            ticket_number,
+            tier_name,
+            tier_price
+          ),
           ticket_tiers (*)
         `)
         .eq('user_id', user.id)
