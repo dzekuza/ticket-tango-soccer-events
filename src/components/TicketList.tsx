@@ -13,6 +13,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { Button } from "@/components/ui/button"
 import { TicketDetailsDialog } from './TicketDetailsDialog';
 import { DeleteTicketDialog } from './DeleteTicketDialog';
 import { TicketPDFActions } from './TicketPDFActions';
