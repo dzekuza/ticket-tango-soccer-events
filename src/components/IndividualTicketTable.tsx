@@ -11,8 +11,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { QrCode, Search } from 'lucide-react';
+import { QrCode, Search, Download } from 'lucide-react';
 import { IndividualTicket } from './Dashboard';
+import { generateTicketPDF } from '@/utils/pdfRenderer';
+import { useToast } from '@/hooks/use-toast';
 
 interface IndividualTicketTableProps {
   tickets: IndividualTicket[];
@@ -20,6 +22,8 @@ interface IndividualTicketTableProps {
 
 export const IndividualTicketTable: React.FC<IndividualTicketTableProps> = ({ tickets }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const filteredTickets = tickets.filter(ticket =>
     ticket.qrCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,11 +92,44 @@ export const IndividualTicketTable: React.FC<IndividualTicketTableProps> = ({ ti
     }
   };
 
+  const handleGenerateIndividualPDF = async (ticket: IndividualTicket) => {
+    setGeneratingPDF(ticket.id);
+    
+    try {
+      // Create a ticket batch object for this single ticket
+      const singleTicketBatch = {
+        id: `single_${ticket.id}`,
+        eventTitle: ticket.eventTitle || 'Event',
+        description: '',
+        price: ticket.price,
+        quantity: 1,
+        createdAt: new Date().toISOString(),
+        tickets: [ticket]
+      };
+
+      await generateTicketPDF([ticket], singleTicketBatch);
+
+      toast({
+        title: "PDF Generated Successfully",
+        description: `Generated PDF for ticket #${ticket.ticketNumber || ticket.id.slice(-4)}`,
+      });
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      toast({
+        title: "PDF Generation Failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPDF(null);
+    }
+  };
+
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* Search */}
       <div className="flex items-center space-x-2">
-        <Search className="w-4 h-4 text-muted-foreground" />
+        <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         <Input
           placeholder="Search tickets..."
           value={searchTerm}
@@ -107,13 +144,13 @@ export const IndividualTicketTable: React.FC<IndividualTicketTableProps> = ({ ti
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs sm:text-sm min-w-[80px]">Ticket #</TableHead>
-                <TableHead className="text-xs sm:text-sm min-w-[80px]">Tier</TableHead>
-                <TableHead className="text-xs sm:text-sm min-w-[80px] hidden sm:table-cell">Seat</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[70px]">Ticket #</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[70px]">Tier</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[80px] hidden md:table-cell">Seat</TableHead>
                 <TableHead className="text-xs sm:text-sm min-w-[60px]">Price</TableHead>
                 <TableHead className="text-xs sm:text-sm min-w-[60px]">Status</TableHead>
                 <TableHead className="text-xs sm:text-sm min-w-[50px] hidden lg:table-cell">QR</TableHead>
-                <TableHead className="text-xs sm:text-sm min-w-[80px]">Actions</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -127,19 +164,21 @@ export const IndividualTicketTable: React.FC<IndividualTicketTableProps> = ({ ti
                 filteredTickets.map((ticket) => (
                   <TableRow key={ticket.id}>
                     <TableCell className="font-medium text-xs sm:text-sm">
-                      #{ticket.ticketNumber || 'N/A'}
+                      #{ticket.ticketNumber || ticket.id.slice(-4)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
                         {ticket.tierName || 'Standard'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs sm:text-sm hidden sm:table-cell">
+                    <TableCell className="text-xs sm:text-sm hidden md:table-cell">
                       {ticket.seatSection && ticket.seatRow && ticket.seatNumber
                         ? `${ticket.seatSection}-${ticket.seatRow}-${ticket.seatNumber}`
                         : 'General'}
                     </TableCell>
-                    <TableCell className="text-xs sm:text-sm">${ticket.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-xs sm:text-sm font-medium">
+                      ${ticket.price.toFixed(2)}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={ticket.isUsed ? "destructive" : "default"} className="text-xs">
                         {ticket.isUsed ? "Used" : "Valid"}
@@ -159,16 +198,33 @@ export const IndividualTicketTable: React.FC<IndividualTicketTableProps> = ({ ti
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewQR(ticket)}
-                        className="flex items-center space-x-1 text-xs h-8 px-2 sm:px-3"
-                      >
-                        <QrCode className="w-3 h-3" />
-                        <span className="hidden sm:inline">View QR</span>
-                        <span className="sm:hidden">QR</span>
-                      </Button>
+                      <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewQR(ticket)}
+                          className="flex items-center space-x-1 text-xs h-7 px-2"
+                        >
+                          <QrCode className="w-3 h-3" />
+                          <span className="hidden sm:inline">View QR</span>
+                          <span className="sm:hidden">QR</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGenerateIndividualPDF(ticket)}
+                          disabled={generatingPDF === ticket.id}
+                          className="flex items-center space-x-1 text-xs h-7 px-2"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span className="hidden sm:inline">
+                            {generatingPDF === ticket.id ? 'PDF...' : 'PDF'}
+                          </span>
+                          <span className="sm:hidden">
+                            {generatingPDF === ticket.id ? '...' : 'PDF'}
+                          </span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

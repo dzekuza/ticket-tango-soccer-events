@@ -43,52 +43,59 @@ export const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({ ticket
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl max-h-[95vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl lg:text-2xl pr-8 break-words">{matchTitle}</DialogTitle>
+      <DialogContent className="max-w-[96vw] sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl max-h-[96vh] overflow-y-auto p-3 sm:p-6">
+        <DialogHeader className="pb-2 sm:pb-4">
+          <DialogTitle className="text-base sm:text-lg lg:text-xl xl:text-2xl pr-6 sm:pr-8 break-words leading-tight">
+            {matchTitle}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-3 sm:space-y-4 lg:space-y-6">
           {/* Event Information */}
-          <Card>
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+          <Card className="border-muted">
+            <CardHeader className="pb-2 sm:pb-3 lg:pb-4 px-3 sm:px-6">
+              <CardTitle className="flex items-center space-x-2 text-sm sm:text-base lg:text-lg">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 flex-shrink-0" />
                 <span>Event Information</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 sm:space-y-4 pt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <CardContent className="space-y-2 sm:space-y-3 lg:space-y-4 pt-0 px-3 sm:px-6">
+              <div className="grid grid-cols-1 gap-2 sm:gap-3 lg:gap-4">
                 {eventDateTime && (
-                  <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Date & Time</p>
+                  <div className="bg-muted/50 p-2 sm:p-3 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Date & Time</p>
                     <p className="font-medium text-sm sm:text-base">{eventDateTime.date}</p>
                     {eventDateTime.timeRange && (
                       <p className="text-xs sm:text-sm text-muted-foreground">{eventDateTime.timeRange}</p>
                     )}
                   </div>
                 )}
-                {supabaseTicket?.stadium_name && (
-                  <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Venue</p>
-                    <p className="font-medium text-sm sm:text-base flex items-center">
-                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                      <span className="break-words">{supabaseTicket.stadium_name}</span>
-                    </p>
-                  </div>
-                )}
-                {supabaseTicket?.competition && (
-                  <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Competition</p>
-                    <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs sm:text-sm">
-                      {supabaseTicket.competition}
-                    </Badge>
-                  </div>
-                )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                  {supabaseTicket?.stadium_name && (
+                    <div className="bg-muted/50 p-2 sm:p-3 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Venue</p>
+                      <p className="font-medium text-sm sm:text-base flex items-center">
+                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                        <span className="break-words">{supabaseTicket.stadium_name}</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  {supabaseTicket?.competition && (
+                    <div className="bg-muted/50 p-2 sm:p-3 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Competition</p>
+                      <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs sm:text-sm">
+                        {supabaseTicket.competition}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+                
                 {ticket.description && (
-                  <div className="sm:col-span-2">
-                    <p className="text-xs sm:text-sm text-muted-foreground">Description</p>
-                    <p className="font-medium text-sm sm:text-base break-words">{ticket.description}</p>
+                  <div className="bg-muted/50 p-2 sm:p-3 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Description</p>
+                    <p className="font-medium text-sm sm:text-base break-words leading-relaxed">{ticket.description}</p>
                   </div>
                 )}
               </div>
@@ -97,26 +104,28 @@ export const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({ ticket
 
           {/* Pricing Information */}
           {supabaseTicket?.ticket_tiers && supabaseTicket.ticket_tiers.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Card className="border-muted">
+              <CardHeader className="pb-2 sm:pb-3 lg:pb-4 px-3 sm:px-6">
+                <CardTitle className="flex items-center space-x-2 text-sm sm:text-base lg:text-lg">
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 flex-shrink-0" />
                   <span>Pricing Tiers</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+              <CardContent className="pt-0 px-3 sm:px-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
                   {supabaseTicket.ticket_tiers.map((tier: any) => (
-                    <div key={tier.id} className="p-3 sm:p-4 bg-muted rounded-lg">
-                      <h4 className="font-medium text-sm sm:text-base lg:text-lg break-words">{tier.tier_name}</h4>
-                      <p className="text-xl sm:text-2xl font-bold text-green-600">
+                    <div key={tier.id} className="p-3 sm:p-4 bg-muted/50 rounded-lg border">
+                      <h4 className="font-medium text-sm sm:text-base lg:text-lg break-words mb-1">
+                        {tier.tier_name}
+                      </h4>
+                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600 mb-1">
                         ${tier.tier_price.toFixed(2)}
                       </p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
-                        {tier.tier_quantity} tickets
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-2">
+                        {tier.tier_quantity} tickets available
                       </p>
                       {tier.tier_description && (
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-2 break-words">
+                        <p className="text-xs sm:text-sm text-muted-foreground break-words leading-relaxed">
                           {tier.tier_description}
                         </p>
                       )}
@@ -128,26 +137,26 @@ export const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({ ticket
           )}
 
           {/* Statistics */}
-          <Card>
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="text-base sm:text-lg">Statistics</CardTitle>
+          <Card className="border-muted">
+            <CardHeader className="pb-2 sm:pb-3 lg:pb-4 px-3 sm:px-6">
+              <CardTitle className="text-sm sm:text-base lg:text-lg">Statistics</CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Total Tickets</p>
+            <CardContent className="pt-0 px-3 sm:px-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+                <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg border">
+                  <p className="text-xs text-muted-foreground mb-1">Total Tickets</p>
                   <p className="text-lg sm:text-xl font-bold">{ticket.quantity}</p>
                 </div>
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Validated</p>
+                <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg border">
+                  <p className="text-xs text-muted-foreground mb-1">Validated</p>
                   <p className="text-lg sm:text-xl font-bold text-green-600">{validatedCount}</p>
                 </div>
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Remaining</p>
+                <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg border">
+                  <p className="text-xs text-muted-foreground mb-1">Remaining</p>
                   <p className="text-lg sm:text-xl font-bold text-blue-600">{ticket.quantity - validatedCount}</p>
                 </div>
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Total Revenue</p>
+                <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg border">
+                  <p className="text-xs text-muted-foreground mb-1">Total Revenue</p>
                   <p className="text-lg sm:text-xl font-bold text-green-600">${totalRevenue.toFixed(2)}</p>
                 </div>
               </div>
@@ -155,19 +164,15 @@ export const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({ ticket
           </Card>
 
           {/* Individual Tickets */}
-          <Card>
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-                <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
+          <Card className="border-muted">
+            <CardHeader className="pb-2 sm:pb-3 lg:pb-4 px-3 sm:px-6">
+              <CardTitle className="flex items-center space-x-2 text-sm sm:text-base lg:text-lg">
+                <QrCode className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 flex-shrink-0" />
                 <span>Individual Tickets</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="overflow-x-auto -mx-4 sm:-mx-6">
-                <div className="px-4 sm:px-6">
-                  <IndividualTicketTable tickets={ticket.tickets} />
-                </div>
-              </div>
+            <CardContent className="pt-0 px-3 sm:px-6">
+              <IndividualTicketTable tickets={ticket.tickets} />
             </CardContent>
           </Card>
         </div>
