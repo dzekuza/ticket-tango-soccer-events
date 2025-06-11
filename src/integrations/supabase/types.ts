@@ -11,7 +11,14 @@ export type Database = {
     Tables: {
       individual_tickets: {
         Row: {
+          away_team: string | null
+          competition: string | null
           created_at: string
+          event_date: string | null
+          event_end_time: string | null
+          event_start_time: string | null
+          event_title: string | null
+          home_team: string | null
           id: string
           is_used: boolean
           qr_code: string
@@ -19,12 +26,23 @@ export type Database = {
           seat_number: string | null
           seat_row: string | null
           seat_section: string | null
+          stadium_name: string | null
           ticket_batch_id: string
+          ticket_number: number | null
           tier_id: string | null
+          tier_name: string | null
+          tier_price: number | null
           validated_at: string | null
         }
         Insert: {
+          away_team?: string | null
+          competition?: string | null
           created_at?: string
+          event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
+          event_title?: string | null
+          home_team?: string | null
           id?: string
           is_used?: boolean
           qr_code: string
@@ -32,12 +50,23 @@ export type Database = {
           seat_number?: string | null
           seat_row?: string | null
           seat_section?: string | null
+          stadium_name?: string | null
           ticket_batch_id: string
+          ticket_number?: number | null
           tier_id?: string | null
+          tier_name?: string | null
+          tier_price?: number | null
           validated_at?: string | null
         }
         Update: {
+          away_team?: string | null
+          competition?: string | null
           created_at?: string
+          event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
+          event_title?: string | null
+          home_team?: string | null
           id?: string
           is_used?: boolean
           qr_code?: string
@@ -45,8 +74,12 @@ export type Database = {
           seat_number?: string | null
           seat_row?: string | null
           seat_section?: string | null
+          stadium_name?: string | null
           ticket_batch_id?: string
+          ticket_number?: number | null
           tier_id?: string | null
+          tier_name?: string | null
+          tier_price?: number | null
           validated_at?: string | null
         }
         Relationships: [

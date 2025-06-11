@@ -44,9 +44,11 @@ export const TicketCreation: React.FC<TicketCreationProps> = ({
     formData: enhancedFormData,
     isCreating: isEnhancedCreating,
     isCompleted: isEnhancedCompleted,
+    progress: enhancedProgress,
     handleInputChange: handleEnhancedInputChange,
     createTickets: createEnhancedTickets,
     resetForm: resetEnhancedForm,
+    cancelCreation: cancelEnhancedCreation,
   } = useEnhancedTicketCreation(onTicketCreated);
 
   const handleBasicSubmit = (e: React.FormEvent) => {
@@ -67,11 +69,11 @@ export const TicketCreation: React.FC<TicketCreationProps> = ({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Create Event Tickets</h1>
-        <p className="text-gray-600 mt-1">Set up tickets for your soccer event</p>
+        <p className="text-gray-600 mt-1">Set up tickets for your soccer event with individual progress tracking</p>
       </div>
 
-      {/* Mode Selection - hide when completed */}
-      {!isEnhancedCompleted && (
+      {/* Mode Selection - hide when completed or creating */}
+      {!isEnhancedCompleted && !isEnhancedCreating && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -104,8 +106,8 @@ export const TicketCreation: React.FC<TicketCreationProps> = ({
                 <div>
                   <h4 className="font-medium text-green-800 mb-1">Enhanced Soccer Mode</h4>
                   <p className="text-sm text-green-700">
-                    Create professional soccer tickets with team matchups, pricing tiers, venue details, and scheduled events.
-                    Perfect for tournaments, league matches, and professional events.
+                    Create professional soccer tickets with individual progress tracking, team matchups, pricing tiers, 
+                    and venue details. Each ticket is created individually with real-time progress updates.
                   </p>
                 </div>
               ) : (
@@ -127,9 +129,11 @@ export const TicketCreation: React.FC<TicketCreationProps> = ({
           formData={enhancedFormData}
           isCreating={isEnhancedCreating}
           isCompleted={isEnhancedCompleted}
+          progress={enhancedProgress}
           onInputChange={handleEnhancedInputChange}
           onSubmit={handleEnhancedSubmit}
           onReset={handleResetAndCreateNew}
+          onCancel={cancelEnhancedCreation}
           onNavigateToTickets={onNavigateToTickets}
         />
       ) : (
