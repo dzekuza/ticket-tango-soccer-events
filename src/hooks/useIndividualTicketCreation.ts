@@ -1,10 +1,10 @@
-
 import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { generateTicketQRCode, createQRCodeData } from '@/utils/ticketQRGenerator';
 import { EnhancedTicketFormData } from '@/types/ticket';
+import { sendTicketCreatedWebhook } from '@/services/webhookService';
 
 export interface TicketProgress {
   current: number;
@@ -123,6 +123,7 @@ export const useIndividualTicketCreation = () => {
 
       // Now create tickets individually
       const createdIndividualTickets: CreatedTicket[] = [];
+      const webhookTickets: any[] = [];
       let globalTicketCounter = 1;
 
       for (const [tierIndex, tierFormData] of formData.tiers.entries()) {
@@ -206,6 +207,18 @@ export const useIndividualTicketCreation = () => {
             qrCodeImage: qrCodeImage,
           };
 
+          // Prepare webhook data for this ticket
+          webhookTickets.push({
+            id: individualTicket.id,
+            ticketNumber: globalTicketCounter,
+            tierName: tier.tier_name,
+            tierPrice: tier.tier_price,
+            qrCode: JSON.stringify(qrCodeData),
+            seatSection: null,
+            seatRow: null,
+            seatNumber: globalTicketCounter.toString(),
+          });
+
           createdIndividualTickets.push(createdTicket);
           setCreatedTickets(prev => [...prev, createdTicket]);
 
@@ -233,6 +246,37 @@ export const useIndividualTicketCreation = () => {
         ...prev,
         status: 'completed'
       }));
+
+      // Send webhook to n8n with all ticket data
+      const totalRevenue = formData.tiers.reduce((sum, tier) => sum + (parseFloat(tier.tierPrice) * parseInt(tier.tierQuantity)), 0);
+      
+      await sendTicketCreatedWebhook({
+        ticketBatch: {
+          id: ticketBatch.id,
+          eventTitle,
+          description: formData.description,
+          price: avgPrice,
+          quantity: totalTickets,
+          eventDate: formData.eventDate,
+          eventStartTime: formData.eventStartTime,
+          eventEndTime: formData.eventEndTime,
+          homeTeam: formData.homeTeam,
+          awayTeam: formData.awayTeam,
+          stadiumName: formData.stadiumName,
+          competition: formData.competition,
+          createdAt: ticketBatch.created_at,
+        },
+        tickets: webhookTickets,
+        tiers: insertedTiers.map(tier => ({
+          id: tier.id,
+          tierName: tier.tier_name,
+          tierPrice: tier.tier_price,
+          tierQuantity: tier.tier_quantity,
+          tierDescription: tier.tier_description,
+        })),
+        totalRevenue,
+        timestamp: new Date().toISOString(),
+      });
 
       // Call the callback to update the main ticket list
       if (onTicketCreated) {
