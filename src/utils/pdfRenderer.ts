@@ -74,6 +74,9 @@ const createTicketElement = (
   ticketDiv.style.margin = '0 auto';
   ticketDiv.style.maxWidth = '600px';
 
+  // Convert createdAt string to Date for formatting
+  const eventDate = new Date(ticketBatch.createdAt);
+
   ticketDiv.innerHTML = `
     <div style="
       background: white;
@@ -142,7 +145,7 @@ const createTicketElement = (
               align-items: center;
             ">
               <span style="margin-right: 8px;">📅</span>
-              Event Date: ${ticketBatch.createdAt.toLocaleDateString()}
+              Event Date: ${eventDate.toLocaleDateString()}
             </div>
           </div>
           <div style="margin-bottom: 12px;">
@@ -173,7 +176,7 @@ const createTicketElement = (
                 margin-top: 4px;
                 margin-left: 20px;
               ">
-                Validated: ${ticket.validatedAt.toLocaleString()}
+                Validated: ${new Date(ticket.validatedAt).toLocaleString()}
               </div>
             ` : ''}
           </div>

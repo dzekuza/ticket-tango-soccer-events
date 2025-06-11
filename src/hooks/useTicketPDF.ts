@@ -32,7 +32,7 @@ export const useTicketPDF = (tickets: SupabaseTicket[], refetchTickets: () => Pr
           eventTitle: ticket.event_title,
           price: ticket.price,
           isUsed: it.is_used,
-          validatedAt: it.validated_at ? new Date(it.validated_at) : undefined,
+          validatedAt: it.validated_at,
         })),
         {
           id: ticket.id,

@@ -286,7 +286,7 @@ const createTicketHTML = (
                   align-items: center;
                 ">
                   <span style="margin-right: 8px;">📅</span>
-                  Created: ${ticketBatch.createdAt.toLocaleDateString()}
+                  Created: ${new Date(ticketBatch.createdAt).toLocaleDateString()}
                 </div>
               </div>
             `}
@@ -347,7 +347,7 @@ const createTicketHTML = (
                   margin-top: 4px;
                   margin-left: 20px;
                 ">
-                  Validated: ${validatedAt.toLocaleString()}
+                  Validated: ${new Date(validatedAt).toLocaleString()}
                 </div>
               ` : ''}
             </div>

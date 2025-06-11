@@ -74,7 +74,7 @@ export const TicketPreview: React.FC<TicketPreviewProps> = ({ ticket }) => {
               ticket={currentTicket}
               eventTitle={ticket.eventTitle}
               eventDescription={ticket.description}
-              eventDate={ticket.createdAt.toLocaleDateString()}
+              eventDate={new Date(ticket.createdAt).toLocaleDateString()}
             />
           </div>
 

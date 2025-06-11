@@ -27,7 +27,7 @@ export const useTicketPDFOperations = () => {
         eventTitle: eventData.eventTitle,
         price: originalTicket.price,
         isUsed: dbTicket.is_used,
-        validatedAt: dbTicket.validated_at ? new Date(dbTicket.validated_at) : undefined,
+        validatedAt: dbTicket.validated_at,
         tierName: originalTicket.tierName,
         ticketNumber: originalTicket.ticketNumber,
       };
