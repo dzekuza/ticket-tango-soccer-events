@@ -53,6 +53,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, isActive }) => {
       setError('');
       await qrScanner.start();
       setIsScanning(true);
+      
+      // Force video to play on iOS Safari
+      if (videoRef.current) {
+        videoRef.current.play().catch(console.error);
+      }
     } catch (err) {
       console.error('Error starting scanner:', err);
       setError('Failed to start camera. Please check permissions.');
@@ -131,7 +136,16 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, isActive }) => {
           <video
             ref={videoRef}
             className="w-full h-64 bg-black rounded-lg object-cover"
-            style={{ display: isScanning ? 'block' : 'none' }}
+            style={{ 
+              opacity: isScanning ? 1 : 0,
+              visibility: isScanning ? 'visible' : 'hidden',
+              position: isScanning ? 'relative' : 'absolute'
+            }}
+            playsInline
+            autoPlay
+            muted
+            webkit-playsinline="true"
+            controls={false}
           />
           {!isScanning && (
             <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
