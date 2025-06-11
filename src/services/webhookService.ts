@@ -37,10 +37,11 @@ interface TicketWebhookData {
 }
 
 export const sendTicketCreatedWebhook = async (data: TicketWebhookData): Promise<void> => {
-  const webhookUrl = 'https://n8n.srv824584.hstgr.cloud/webhook/new-ticket-event';
+  // Use our Supabase Edge Function as a proxy to avoid CORS issues
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
 
   try {
-    console.log('Sending ticket created webhook to n8n:', {
+    console.log('Sending ticket created webhook via edge function proxy:', {
       eventTitle: data.ticketBatch.eventTitle,
       ticketCount: data.tickets.length,
       totalRevenue: data.totalRevenue
@@ -50,6 +51,7 @@ export const sendTicketCreatedWebhook = async (data: TicketWebhookData): Promise
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
         event: 'ticket_created',
@@ -57,9 +59,14 @@ export const sendTicketCreatedWebhook = async (data: TicketWebhookData): Promise
       }),
     });
 
-    const result = await response.text(); // optional logging
-    console.log('✅ Webhook sent successfully to n8n:', result);
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log('✅ Webhook sent successfully via proxy:', result.message);
+    } else {
+      console.error('❌ Webhook proxy returned error:', result.error);
+    }
   } catch (error) {
-    console.error('❌ Failed to send webhook to n8n:', error);
+    console.error('❌ Failed to send webhook via proxy:', error);
   }
 };
