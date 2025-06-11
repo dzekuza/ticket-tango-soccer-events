@@ -1,25 +1,10 @@
-import React, { useState } from 'react';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import { AppSidebar } from './AppSidebar';
-import { MobileBottomNav } from './MobileBottomNav';
-import { ResponsiveHeader } from './ResponsiveHeader';
-import { useIsMobile } from '@/hooks/use-mobile';
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { TicketCreation } from './TicketCreation';
 import { TicketList } from './TicketList';
-import { TicketScanner } from './TicketScanner';
 import { DashboardOverview } from './DashboardOverview';
 import { useSupabaseTickets } from '@/hooks/useSupabaseTickets';
-
-// Keep legacy interfaces for compatibility
-export interface Ticket {
-  id: string;
-  eventTitle: string;
-  description: string;
-  price: number;
-  quantity: number;
-  createdAt: Date;
-  tickets: IndividualTicket[];
-}
 
 export interface IndividualTicket {
   id: string;
@@ -29,91 +14,138 @@ export interface IndividualTicket {
   price: number;
   isUsed: boolean;
   validatedAt?: Date;
+  // New soccer-specific fields
+  tierId?: string;
+  seatSection?: string;
+  seatRow?: string;
+  seatNumber?: string;
 }
 
-const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
-  const isMobile = useIsMobile();
-  const { tickets: supabaseTickets, loading, createTicketBatch, validateTicket } = useSupabaseTickets();
+export interface Ticket {
+  id: string;
+  eventTitle: string;
+  description: string;
+  price: number;
+  quantity: number;
+  createdAt: Date;
+  tickets: IndividualTicket[];
+  // New soccer-specific fields
+  eventDate?: string;
+  eventStartTime?: string;
+  eventEndTime?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  stadiumName?: string;
+  competition?: string;
+}
 
-  // Convert Supabase tickets to legacy format for existing components
-  const tickets: Ticket[] = supabaseTickets.map(ticket => ({
-    id: ticket.id,
-    eventTitle: ticket.event_title,
-    description: ticket.description || '',
-    price: ticket.price,
-    quantity: ticket.quantity,
-    createdAt: new Date(ticket.created_at),
-    tickets: ticket.individual_tickets.map(individualTicket => ({
-      id: individualTicket.id,
-      qrCode: individualTicket.qr_code,
-      qrCodeImage: individualTicket.qr_code_image,
-      eventTitle: ticket.event_title,
-      price: ticket.price,
-      isUsed: individualTicket.is_used,
-      validatedAt: individualTicket.validated_at ? new Date(individualTicket.validated_at) : undefined,
-    }))
-  }));
+const Dashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'manage'>('overview');
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const { user } = useAuth();
+  const { tickets: supabaseTickets, loading } = useSupabaseTickets();
 
-  const addTicketBatch = async (newTicket: Ticket) => {
-    await createTicketBatch(
-      newTicket.eventTitle,
-      newTicket.description,
-      newTicket.price,
-      newTicket.quantity,
-      newTicket.tickets
-    );
+  useEffect(() => {
+    if (supabaseTickets) {
+      const mappedTickets: Ticket[] = supabaseTickets.map(ticket => ({
+        id: ticket.id,
+        eventTitle: ticket.event_title,
+        description: ticket.description || '',
+        price: ticket.price,
+        quantity: ticket.quantity,
+        createdAt: new Date(ticket.created_at),
+        eventDate: ticket.event_date || undefined,
+        eventStartTime: ticket.event_start_time || undefined,
+        eventEndTime: ticket.event_end_time || undefined,
+        homeTeam: ticket.home_team || undefined,
+        awayTeam: ticket.away_team || undefined,
+        stadiumName: ticket.stadium_name || undefined,
+        competition: ticket.competition || undefined,
+        tickets: ticket.individual_tickets.map(it => ({
+          id: it.id,
+          qrCode: it.qr_code,
+          qrCodeImage: it.qr_code_image || undefined,
+          eventTitle: ticket.event_title,
+          price: ticket.price,
+          isUsed: it.is_used,
+          validatedAt: it.validated_at ? new Date(it.validated_at) : undefined,
+          tierId: it.tier_id || undefined,
+          seatSection: it.seat_section || undefined,
+          seatRow: it.seat_row || undefined,
+          seatNumber: it.seat_number || undefined,
+        }))
+      }));
+      setTickets(mappedTickets);
+    }
+  }, [supabaseTickets]);
+
+  const handleTicketCreated = (newTicket: Ticket) => {
+    setTickets(prev => [newTicket, ...prev]);
   };
 
-  const handleValidateTicket = async (ticketId: string) => {
-    await validateTicket(ticketId);
-  };
-
-  const renderActiveComponent = () => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading tickets...</p>
-          </div>
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
+          <p className="text-gray-600">You need to be signed in to access the dashboard.</p>
         </div>
-      );
-    }
+      </div>
+    );
+  }
 
-    switch (activeTab) {
-      case 'overview':
-        return <DashboardOverview tickets={tickets} />;
-      case 'create':
-        return <TicketCreation onTicketCreated={addTicketBatch} />;
-      case 'manage':
-        return <TicketList tickets={tickets} />;
-      case 'scanner':
-        return <TicketScanner tickets={tickets} onValidate={handleValidateTicket} />;
-      default:
-        return <DashboardOverview tickets={tickets} />;
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your tickets...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        {!isMobile && (
-          <AppSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        )}
-        <div className="flex-1 flex flex-col">
-          <ResponsiveHeader />
-          <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">
-            <div className="max-w-7xl mx-auto">
-              {renderActiveComponent()}
-            </div>
-          </main>
-        </div>
-        {isMobile && (
-          <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
-        )}
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <nav className="flex space-x-8 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'overview'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('create')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'create'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Create Tickets
+          </button>
+          <button
+            onClick={() => setActiveTab('manage')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'manage'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Manage Tickets
+          </button>
+        </nav>
       </div>
-    </SidebarProvider>
+
+      {activeTab === 'overview' && <DashboardOverview tickets={tickets} />}
+      {activeTab === 'create' && <TicketCreation onTicketCreated={handleTicketCreated} />}
+      {activeTab === 'manage' && <TicketList tickets={tickets} />}
+    </div>
   );
 };
 
