@@ -38,7 +38,7 @@ interface TicketWebhookData {
 
 export const sendTicketCreatedWebhook = async (data: TicketWebhookData): Promise<void> => {
   const webhookUrl = 'https://n8n.srv824584.hstgr.cloud/webhook/new-ticket-event';
-  
+
   try {
     console.log('Sending ticket created webhook to n8n:', {
       eventTitle: data.ticketBatch.eventTitle,
@@ -51,16 +51,15 @@ export const sendTicketCreatedWebhook = async (data: TicketWebhookData): Promise
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'no-cors',
       body: JSON.stringify({
         event: 'ticket_created',
         ...data
       }),
     });
 
-    console.log('✅ Webhook sent successfully to n8n');
+    const result = await response.text(); // optional logging
+    console.log('✅ Webhook sent successfully to n8n:', result);
   } catch (error) {
     console.error('❌ Failed to send webhook to n8n:', error);
-    // Don't throw error to avoid breaking ticket creation flow
   }
 };
