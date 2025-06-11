@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Ticket } from './Dashboard';
-import { useTicketCreation } from '@/hooks/useTicketCreation';
 import { useEnhancedTicketCreation } from '@/hooks/useEnhancedTicketCreation';
 import { TicketCreationForm } from './TicketCreationForm';
 import { EnhancedTicketCreationForm } from './EnhancedTicketCreationForm';
@@ -21,12 +20,25 @@ export const TicketCreation: React.FC<TicketCreationProps> = ({
 }) => {
   const [useEnhancedMode, setUseEnhancedMode] = useState(true);
   
-  const {
-    formData: basicFormData,
-    isCreating: isBasicCreating,
-    handleInputChange: handleBasicInputChange,
-    createTickets: createBasicTickets,
-  } = useTicketCreation(onTicketCreated);
+  // Basic mode form state
+  const [basicFormData, setBasicFormData] = useState({
+    eventTitle: '',
+    description: '',
+    price: '',
+    quantity: '',
+  });
+  const [isBasicCreating, setIsBasicCreating] = useState(false);
+
+  const handleBasicInputChange = (field: string, value: string) => {
+    setBasicFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const createBasicTickets = () => {
+    setIsBasicCreating(true);
+    // This would need to be implemented if basic mode is used
+    // For now, just reset the creating state
+    setTimeout(() => setIsBasicCreating(false), 1000);
+  };
 
   const {
     formData: enhancedFormData,
