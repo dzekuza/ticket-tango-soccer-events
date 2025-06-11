@@ -8,6 +8,8 @@ import { Ticket } from './Dashboard';
 import { useToast } from '@/hooks/use-toast';
 import { TicketPreview } from './TicketPreview';
 import { TicketPDFGenerator } from './TicketPDFGenerator';
+import { TicketDetailsDialog } from './TicketDetailsDialog';
+import { DeleteTicketDialog } from './DeleteTicketDialog';
 import { useSupabaseTickets } from '@/hooks/useSupabaseTickets';
 
 interface TicketListProps {
@@ -16,7 +18,7 @@ interface TicketListProps {
 
 export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
   const { toast } = useToast();
-  const { tickets: supabaseTickets } = useSupabaseTickets();
+  const { tickets: supabaseTickets, refetch } = useSupabaseTickets();
 
   const handleExportTickets = (ticket: Ticket) => {
     // Create a simple CSV export for WordPress upload
@@ -67,6 +69,10 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
       : null;
     
     return { date, timeRange };
+  };
+
+  const handleTicketDeleted = () => {
+    refetch();
   };
 
   return (
@@ -225,10 +231,18 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
                       <Download className="w-4 h-4" />
                       <span>Export CSV</span>
                     </Button>
-                    <Button variant="outline" className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>View Details</span>
-                    </Button>
+                    
+                    <TicketDetailsDialog ticket={ticket}>
+                      <Button variant="outline" className="flex items-center space-x-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>View Details</span>
+                      </Button>
+                    </TicketDetailsDialog>
+
+                    <DeleteTicketDialog 
+                      ticket={ticket} 
+                      onTicketDeleted={handleTicketDeleted}
+                    />
                   </div>
                 </CardContent>
               </Card>
