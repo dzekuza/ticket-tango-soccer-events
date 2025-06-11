@@ -85,18 +85,26 @@ export const useSupabaseTickets = () => {
   ) => {
     if (!user) return null;
 
-    console.log('Creating enhanced ticket batch with data:', { eventData, tiers, individualTicketsCount: individualTickets.length });
+    console.log('Creating enhanced ticket batch with data:', { 
+      eventData, 
+      tiers, 
+      individualTicketsCount: individualTickets.length 
+    });
 
     try {
-      // Create ticket batch with enhanced fields
+      // Start transaction-like approach - create ticket batch first
+      const totalQuantity = tiers.reduce((sum, tier) => sum + tier.tier_quantity, 0);
+      const avgPrice = tiers.reduce((sum, tier) => sum + (tier.tier_price * tier.tier_quantity), 0) / totalQuantity;
+
+      console.log('Creating main ticket batch...');
       const { data: ticketBatch, error: batchError } = await supabase
         .from('tickets')
         .insert({
           user_id: user.id,
           event_title: eventData.eventTitle,
           description: eventData.description,
-          price: tiers.reduce((sum, tier) => sum + (tier.tier_price * tier.tier_quantity), 0) / tiers.reduce((sum, tier) => sum + tier.tier_quantity, 0), // Average price
-          quantity: tiers.reduce((sum, tier) => sum + tier.tier_quantity, 0),
+          price: avgPrice,
+          quantity: totalQuantity,
           event_date: eventData.eventDate,
           event_start_time: eventData.eventStartTime,
           event_end_time: eventData.eventEndTime,
@@ -110,12 +118,13 @@ export const useSupabaseTickets = () => {
 
       if (batchError) {
         console.error('Ticket batch creation error:', batchError);
-        throw batchError;
+        throw new Error(`Failed to create ticket batch: ${batchError.message}`);
       }
 
-      console.log('Ticket batch created:', ticketBatch);
+      console.log('✅ Ticket batch created successfully:', ticketBatch.id);
 
       // Create ticket tiers
+      console.log('Creating ticket tiers...');
       const tiersToInsert = tiers.map(tier => ({
         ticket_batch_id: ticketBatch.id,
         tier_name: tier.tier_name,
@@ -131,10 +140,10 @@ export const useSupabaseTickets = () => {
 
       if (tiersError) {
         console.error('Ticket tiers creation error:', tiersError);
-        throw tiersError;
+        throw new Error(`Failed to create ticket tiers: ${tiersError.message}`);
       }
 
-      console.log('Ticket tiers created:', insertedTiers);
+      console.log('✅ Ticket tiers created successfully:', insertedTiers.length);
 
       // Create mapping of tier index to actual tier ID
       const tierIdMapping: Record<string, string> = {};
@@ -142,40 +151,61 @@ export const useSupabaseTickets = () => {
         tierIdMapping[`tier_${index}`] = tier.id;
       });
 
-      console.log('Tier ID mapping:', tierIdMapping);
+      console.log('Tier ID mapping created:', tierIdMapping);
 
-      // Create individual tickets with proper tier assignments
-      const ticketsToInsert = individualTickets.map(ticket => {
+      // Validate and prepare individual tickets
+      console.log('Preparing individual tickets for database insertion...');
+      const ticketsToInsert = [];
+      
+      for (const ticket of individualTickets) {
         const actualTierId = tierIdMapping[ticket.tierId];
         if (!actualTierId) {
-          console.error('Missing tier ID for ticket:', ticket.tierId);
+          console.error('Missing tier ID for ticket:', ticket.tierId, 'Available mappings:', tierIdMapping);
           throw new Error(`Invalid tier ID: ${ticket.tierId}`);
         }
+
+        // Validate ticket data
+        if (!ticket.qrCode || !ticket.id) {
+          console.error('Invalid ticket data:', ticket);
+          throw new Error('Ticket missing required data (qrCode or id)');
+        }
         
-        return {
+        ticketsToInsert.push({
           ticket_batch_id: ticketBatch.id,
           qr_code: ticket.qrCode,
-          qr_code_image: ticket.qrCodeImage,
+          qr_code_image: ticket.qrCodeImage || null,
           tier_id: actualTierId,
-          seat_section: ticket.seatSection,
-          seat_row: ticket.seatRow,
-          seat_number: ticket.seatNumber,
-        };
-      });
-
-      console.log('Creating individual tickets:', ticketsToInsert.length);
-
-      const { data: insertedIndividualTickets, error: ticketsError } = await supabase
-        .from('individual_tickets')
-        .insert(ticketsToInsert)
-        .select();
-
-      if (ticketsError) {
-        console.error('Individual tickets creation error:', ticketsError);
-        throw ticketsError;
+          seat_section: ticket.seatSection || null,
+          seat_row: ticket.seatRow || null,
+          seat_number: ticket.seatNumber || null,
+        });
       }
 
-      console.log('Individual tickets created successfully:', insertedIndividualTickets.length);
+      console.log(`Inserting ${ticketsToInsert.length} individual tickets...`);
+
+      // Insert individual tickets in smaller batches to avoid timeout
+      const batchSize = 100;
+      const insertedIndividualTickets = [];
+      
+      for (let i = 0; i < ticketsToInsert.length; i += batchSize) {
+        const batch = ticketsToInsert.slice(i, i + batchSize);
+        console.log(`Inserting batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(ticketsToInsert.length/batchSize)} (${batch.length} tickets)`);
+        
+        const { data: batchResult, error: batchError } = await supabase
+          .from('individual_tickets')
+          .insert(batch)
+          .select();
+
+        if (batchError) {
+          console.error('Individual tickets batch insertion error:', batchError);
+          throw new Error(`Failed to insert ticket batch ${Math.floor(i/batchSize) + 1}: ${batchError.message}`);
+        }
+
+        insertedIndividualTickets.push(...batchResult);
+        console.log(`✅ Batch ${Math.floor(i/batchSize) + 1} inserted successfully`);
+      }
+
+      console.log('✅ All individual tickets created successfully:', insertedIndividualTickets.length);
 
       // Verify all tickets were created
       if (insertedIndividualTickets.length !== individualTickets.length) {
@@ -183,6 +213,7 @@ export const useSupabaseTickets = () => {
       }
 
       // Prepare individual tickets data for PDF generation
+      console.log('Preparing ticket data for PDF generation...');
       const ticketsForPDF = insertedIndividualTickets.map((dbTicket, index) => {
         const originalTicket = individualTickets[index];
         return {
@@ -193,6 +224,8 @@ export const useSupabaseTickets = () => {
           price: originalTicket.price,
           isUsed: dbTicket.is_used,
           validatedAt: dbTicket.validated_at ? new Date(dbTicket.validated_at) : undefined,
+          tierName: originalTicket.tierName,
+          ticketNumber: originalTicket.ticketNumber,
         };
       });
 
@@ -239,23 +272,24 @@ export const useSupabaseTickets = () => {
             variant: "destructive",
           });
         } else {
-          console.log('PDF URL updated successfully');
+          console.log('✅ PDF URL updated successfully');
           toast({
             title: "Success!",
-            description: "Tickets created and PDF generated successfully",
+            description: `Created ${totalQuantity} tickets and generated PDF successfully!`,
           });
         }
       } else if (pdfResult.error) {
         console.error('PDF generation failed:', pdfResult.error);
         toast({
-          title: "Warning",
-          description: `Tickets created successfully, but PDF generation failed: ${pdfResult.error}`,
+          title: "Partial Success",
+          description: `Tickets created successfully, but PDF generation failed. You can regenerate it from the tickets page.`,
           variant: "destructive",
         });
       }
 
       await fetchTickets();
       return ticketBatch;
+      
     } catch (error) {
       console.error('Error creating enhanced ticket batch:', error);
       toast({

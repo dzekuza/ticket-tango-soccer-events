@@ -19,6 +19,8 @@ export interface IndividualTicket {
   seatSection?: string;
   seatRow?: string;
   seatNumber?: string;
+  tierName?: string;
+  ticketNumber?: number;
 }
 
 export interface Ticket {
@@ -61,7 +63,7 @@ const Dashboard: React.FC = () => {
         awayTeam: ticket.away_team || undefined,
         stadiumName: ticket.stadium_name || undefined,
         competition: ticket.competition || undefined,
-        tickets: ticket.individual_tickets.map(it => ({
+        tickets: ticket.individual_tickets.map((it, index) => ({
           id: it.id,
           qrCode: it.qr_code,
           qrCodeImage: it.qr_code_image || undefined,
@@ -73,6 +75,8 @@ const Dashboard: React.FC = () => {
           seatSection: it.seat_section || undefined,
           seatRow: it.seat_row || undefined,
           seatNumber: it.seat_number || undefined,
+          tierName: ticket.ticket_tiers?.find(tier => tier.id === it.tier_id)?.tier_name || 'Standard',
+          ticketNumber: index + 1,
         }))
       }));
       setTickets(mappedTickets);
@@ -81,6 +85,10 @@ const Dashboard: React.FC = () => {
 
   const handleTicketCreated = (newTicket: Ticket) => {
     setTickets(prev => [newTicket, ...prev]);
+  };
+
+  const handleNavigateToTickets = () => {
+    setActiveTab('manage');
   };
 
   if (!user) {
@@ -143,7 +151,12 @@ const Dashboard: React.FC = () => {
       </div>
 
       {activeTab === 'overview' && <DashboardOverview tickets={tickets} />}
-      {activeTab === 'create' && <TicketCreation onTicketCreated={handleTicketCreated} />}
+      {activeTab === 'create' && (
+        <TicketCreation 
+          onTicketCreated={handleTicketCreated} 
+          onNavigateToTickets={handleNavigateToTickets}
+        />
+      )}
       {activeTab === 'manage' && <TicketList tickets={tickets} />}
     </div>
   );
