@@ -40,7 +40,7 @@ export const useTicketPDF = (tickets: SupabaseTicket[], refetchTickets: () => Pr
           description: ticket.description || '',
           price: ticket.price,
           quantity: ticket.quantity,
-          createdAt: new Date(ticket.created_at),
+          createdAt: ticket.created_at,
           tickets: [],
           // Include enhanced event data
           eventDate: ticket.event_date,

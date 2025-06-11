@@ -44,7 +44,7 @@ export const useTicketPDFOperations = () => {
         description: eventData.description || '',
         price: ticketBatch.price,
         quantity: ticketBatch.quantity,
-        createdAt: new Date(ticketBatch.created_at),
+        createdAt: ticketBatch.created_at,
         tickets: ticketsForPDF,
         // Pass enhanced event data
         eventDate: eventData.eventDate,
@@ -111,7 +111,7 @@ export const useTicketPDFOperations = () => {
         description: description || '',
         price,
         quantity,
-        createdAt: new Date(ticketBatch.created_at),
+        createdAt: ticketBatch.created_at,
         tickets: individualTickets
       },
       user.id
