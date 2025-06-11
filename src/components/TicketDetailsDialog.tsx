@@ -43,52 +43,52 @@ export const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({ ticket
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl max-h-[95vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{matchTitle}</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl lg:text-2xl pr-8 break-words">{matchTitle}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Event Information */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="w-5 h-5" />
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>Event Information</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-3 sm:space-y-4 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {eventDateTime && (
                   <div>
-                    <p className="text-sm text-gray-600">Date & Time</p>
-                    <p className="font-medium">{eventDateTime.date}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Date & Time</p>
+                    <p className="font-medium text-sm sm:text-base">{eventDateTime.date}</p>
                     {eventDateTime.timeRange && (
-                      <p className="text-sm text-gray-500">{eventDateTime.timeRange}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{eventDateTime.timeRange}</p>
                     )}
                   </div>
                 )}
                 {supabaseTicket?.stadium_name && (
                   <div>
-                    <p className="text-sm text-gray-600">Venue</p>
-                    <p className="font-medium flex items-center">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {supabaseTicket.stadium_name}
+                    <p className="text-xs sm:text-sm text-muted-foreground">Venue</p>
+                    <p className="font-medium text-sm sm:text-base flex items-center">
+                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                      <span className="break-words">{supabaseTicket.stadium_name}</span>
                     </p>
                   </div>
                 )}
                 {supabaseTicket?.competition && (
                   <div>
-                    <p className="text-sm text-gray-600">Competition</p>
-                    <Badge variant="outline" className="text-blue-600 border-blue-600">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Competition</p>
+                    <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs sm:text-sm">
                       {supabaseTicket.competition}
                     </Badge>
                   </div>
                 )}
                 {ticket.description && (
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-gray-600">Description</p>
-                    <p className="font-medium">{ticket.description}</p>
+                  <div className="sm:col-span-2">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Description</p>
+                    <p className="font-medium text-sm sm:text-base break-words">{ticket.description}</p>
                   </div>
                 )}
               </div>
@@ -98,25 +98,25 @@ export const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({ ticket
           {/* Pricing Information */}
           {supabaseTicket?.ticket_tiers && supabaseTicket.ticket_tiers.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Users className="w-5 h-5" />
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>Pricing Tiers</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                   {supabaseTicket.ticket_tiers.map((tier: any) => (
-                    <div key={tier.id} className="p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-medium text-lg">{tier.tier_name}</h4>
-                      <p className="text-2xl font-bold text-green-600">
+                    <div key={tier.id} className="p-3 sm:p-4 bg-muted rounded-lg">
+                      <h4 className="font-medium text-sm sm:text-base lg:text-lg break-words">{tier.tier_name}</h4>
+                      <p className="text-xl sm:text-2xl font-bold text-green-600">
                         ${tier.tier_price.toFixed(2)}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {tier.tier_quantity} tickets
                       </p>
                       {tier.tier_description && (
-                        <p className="text-sm text-gray-500 mt-2">
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-2 break-words">
                           {tier.tier_description}
                         </p>
                       )}
@@ -129,26 +129,26 @@ export const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({ ticket
 
           {/* Statistics */}
           <Card>
-            <CardHeader>
-              <CardTitle>Statistics</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Statistics</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Total Tickets</p>
-                  <p className="text-xl font-bold">{ticket.quantity}</p>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Tickets</p>
+                  <p className="text-lg sm:text-xl font-bold">{ticket.quantity}</p>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Validated</p>
-                  <p className="text-xl font-bold text-green-600">{validatedCount}</p>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Validated</p>
+                  <p className="text-lg sm:text-xl font-bold text-green-600">{validatedCount}</p>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Remaining</p>
-                  <p className="text-xl font-bold text-blue-600">{ticket.quantity - validatedCount}</p>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Remaining</p>
+                  <p className="text-lg sm:text-xl font-bold text-blue-600">{ticket.quantity - validatedCount}</p>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Total Revenue</p>
-                  <p className="text-xl font-bold text-green-600">${totalRevenue.toFixed(2)}</p>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Revenue</p>
+                  <p className="text-lg sm:text-xl font-bold text-green-600">${totalRevenue.toFixed(2)}</p>
                 </div>
               </div>
             </CardContent>
@@ -156,14 +156,18 @@ export const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({ ticket
 
           {/* Individual Tickets */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <QrCode className="w-5 h-5" />
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>Individual Tickets</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <IndividualTicketTable tickets={ticket.tickets} />
+            <CardContent className="pt-0">
+              <div className="overflow-x-auto -mx-4 sm:-mx-6">
+                <div className="px-4 sm:px-6">
+                  <IndividualTicketTable tickets={ticket.tickets} />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

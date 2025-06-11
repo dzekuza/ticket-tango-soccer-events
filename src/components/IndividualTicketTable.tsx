@@ -89,93 +89,96 @@ export const IndividualTicketTable: React.FC<IndividualTicketTableProps> = ({ ti
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Search */}
       <div className="flex items-center space-x-2">
-        <Search className="w-4 h-4 text-gray-500" />
+        <Search className="w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search tickets by QR code, tier, seat, or ticket number..."
+          placeholder="Search tickets..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md"
+          className="text-sm"
         />
       </div>
 
       {/* Table */}
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Ticket #</TableHead>
-              <TableHead>Tier</TableHead>
-              <TableHead>Seat</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>QR Preview</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTickets.length === 0 ? (
+      <div className="border rounded-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                  {searchTerm ? 'No tickets match your search.' : 'No tickets found.'}
-                </TableCell>
+                <TableHead className="text-xs sm:text-sm min-w-[80px]">Ticket #</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[80px]">Tier</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[80px] hidden sm:table-cell">Seat</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[60px]">Price</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[60px]">Status</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[50px] hidden lg:table-cell">QR</TableHead>
+                <TableHead className="text-xs sm:text-sm min-w-[80px]">Actions</TableHead>
               </TableRow>
-            ) : (
-              filteredTickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="font-medium">
-                    #{ticket.ticketNumber || 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {ticket.tierName || 'Standard'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {ticket.seatSection && ticket.seatRow && ticket.seatNumber
-                      ? `${ticket.seatSection}-${ticket.seatRow}-${ticket.seatNumber}`
-                      : 'General Admission'}
-                  </TableCell>
-                  <TableCell>${ticket.price.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Badge variant={ticket.isUsed ? "destructive" : "default"}>
-                      {ticket.isUsed ? "Used" : "Valid"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {ticket.qrCodeImage ? (
-                      <img 
-                        src={ticket.qrCodeImage} 
-                        alt="QR Code" 
-                        className="w-8 h-8 border rounded"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 bg-gray-200 border rounded flex items-center justify-center">
-                        <QrCode className="w-4 h-4 text-gray-400" />
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewQR(ticket)}
-                      className="flex items-center space-x-1"
-                    >
-                      <QrCode className="w-3 h-3" />
-                      <span>View QR</span>
-                    </Button>
+            </TableHeader>
+            <TableBody>
+              {filteredTickets.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
+                    {searchTerm ? 'No tickets match your search.' : 'No tickets found.'}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredTickets.map((ticket) => (
+                  <TableRow key={ticket.id}>
+                    <TableCell className="font-medium text-xs sm:text-sm">
+                      #{ticket.ticketNumber || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {ticket.tierName || 'Standard'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs sm:text-sm hidden sm:table-cell">
+                      {ticket.seatSection && ticket.seatRow && ticket.seatNumber
+                        ? `${ticket.seatSection}-${ticket.seatRow}-${ticket.seatNumber}`
+                        : 'General'}
+                    </TableCell>
+                    <TableCell className="text-xs sm:text-sm">${ticket.price.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant={ticket.isUsed ? "destructive" : "default"} className="text-xs">
+                        {ticket.isUsed ? "Used" : "Valid"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {ticket.qrCodeImage ? (
+                        <img 
+                          src={ticket.qrCodeImage} 
+                          alt="QR Code" 
+                          className="w-6 h-6 sm:w-8 sm:h-8 border rounded"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-muted border rounded flex items-center justify-center">
+                          <QrCode className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewQR(ticket)}
+                        className="flex items-center space-x-1 text-xs h-8 px-2 sm:px-3"
+                      >
+                        <QrCode className="w-3 h-3" />
+                        <span className="hidden sm:inline">View QR</span>
+                        <span className="sm:hidden">QR</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
-      <div className="text-sm text-gray-500">
+      <div className="text-xs sm:text-sm text-muted-foreground">
         Showing {filteredTickets.length} of {tickets.length} tickets
       </div>
     </div>
