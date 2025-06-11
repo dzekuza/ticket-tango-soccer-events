@@ -16,7 +16,11 @@ export type Database = {
           is_used: boolean
           qr_code: string
           qr_code_image: string | null
+          seat_number: string | null
+          seat_row: string | null
+          seat_section: string | null
           ticket_batch_id: string
+          tier_id: string | null
           validated_at: string | null
         }
         Insert: {
@@ -25,7 +29,11 @@ export type Database = {
           is_used?: boolean
           qr_code: string
           qr_code_image?: string | null
+          seat_number?: string | null
+          seat_row?: string | null
+          seat_section?: string | null
           ticket_batch_id: string
+          tier_id?: string | null
           validated_at?: string | null
         }
         Update: {
@@ -34,7 +42,11 @@ export type Database = {
           is_used?: boolean
           qr_code?: string
           qr_code_image?: string | null
+          seat_number?: string | null
+          seat_row?: string | null
+          seat_section?: string | null
           ticket_batch_id?: string
+          tier_id?: string | null
           validated_at?: string | null
         }
         Relationships: [
@@ -43,6 +55,13 @@ export type Database = {
             columns: ["ticket_batch_id"]
             isOneToOne: false
             referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "individual_tickets_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_tiers"
             referencedColumns: ["id"]
           },
         ]
@@ -71,37 +90,96 @@ export type Database = {
         }
         Relationships: []
       }
-      tickets: {
+      ticket_tiers: {
         Row: {
           created_at: string
+          id: string
+          ticket_batch_id: string
+          tier_description: string | null
+          tier_name: string
+          tier_price: number
+          tier_quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ticket_batch_id: string
+          tier_description?: string | null
+          tier_name: string
+          tier_price?: number
+          tier_quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ticket_batch_id?: string
+          tier_description?: string | null
+          tier_name?: string
+          tier_price?: number
+          tier_quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_tiers_ticket_batch_id_fkey"
+            columns: ["ticket_batch_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          away_team: string | null
+          competition: string | null
+          created_at: string
           description: string | null
+          event_date: string | null
+          event_end_time: string | null
+          event_start_time: string | null
           event_title: string
+          home_team: string | null
           id: string
           pdf_url: string | null
           price: number
           quantity: number
+          stadium_name: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          away_team?: string | null
+          competition?: string | null
           created_at?: string
           description?: string | null
+          event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
           event_title: string
+          home_team?: string | null
           id?: string
           pdf_url?: string | null
           price?: number
           quantity?: number
+          stadium_name?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          away_team?: string | null
+          competition?: string | null
           created_at?: string
           description?: string | null
+          event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
           event_title?: string
+          home_team?: string | null
           id?: string
           pdf_url?: string | null
           price?: number
           quantity?: number
+          stadium_name?: string | null
           updated_at?: string
           user_id?: string
         }

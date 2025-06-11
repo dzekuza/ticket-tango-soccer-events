@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, QrCode, Calendar, FileText } from 'lucide-react';
+import { Download, QrCode, Calendar, FileText, MapPin, Clock, Users } from 'lucide-react';
 import { Ticket } from './Dashboard';
 import { useToast } from '@/hooks/use-toast';
 import { TicketPreview } from './TicketPreview';
@@ -51,6 +51,24 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
     return supabaseTickets.find(t => t.id === ticketId);
   };
 
+  const formatMatchTitle = (supabaseTicket: any) => {
+    if (supabaseTicket?.home_team && supabaseTicket?.away_team) {
+      return `${supabaseTicket.home_team} vs ${supabaseTicket.away_team}`;
+    }
+    return supabaseTicket?.event_title || 'Event';
+  };
+
+  const formatEventDateTime = (supabaseTicket: any) => {
+    if (!supabaseTicket?.event_date) return null;
+    
+    const date = new Date(supabaseTicket.event_date).toLocaleDateString();
+    const timeRange = supabaseTicket.event_start_time && supabaseTicket.event_end_time 
+      ? `${supabaseTicket.event_start_time} - ${supabaseTicket.event_end_time}`
+      : null;
+    
+    return { date, timeRange };
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -71,14 +89,23 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
           {tickets.map((ticket) => {
             const supabaseTicket = getSupabaseTicket(ticket.id);
             const hasPDF = !!supabaseTicket?.pdf_url;
+            const eventDateTime = formatEventDateTime(supabaseTicket);
+            const matchTitle = formatMatchTitle(supabaseTicket);
             
             return (
               <Card key={ticket.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-xl">{ticket.eventTitle}</CardTitle>
-                      <p className="text-gray-600 mt-1">{ticket.description}</p>
+                    <div className="space-y-2">
+                      <CardTitle className="text-xl">{matchTitle}</CardTitle>
+                      {supabaseTicket?.competition && (
+                        <Badge variant="outline" className="text-blue-600 border-blue-600">
+                          {supabaseTicket.competition}
+                        </Badge>
+                      )}
+                      {ticket.description && (
+                        <p className="text-gray-600 mt-1">{ticket.description}</p>
+                      )}
                     </div>
                     <div className="flex items-center space-x-2">
                       <Badge variant="secondary">
@@ -92,12 +119,64 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets }) => {
                       )}
                     </div>
                   </div>
+
+                  {/* Enhanced Event Details */}
+                  {(eventDateTime || supabaseTicket?.stadium_name) && (
+                    <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600">
+                      {eventDateTime && (
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="w-4 h-4" />
+                          <span>{eventDateTime.date}</span>
+                          {eventDateTime.timeRange && (
+                            <>
+                              <Clock className="w-4 h-4 ml-2" />
+                              <span>{eventDateTime.timeRange}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {supabaseTicket?.stadium_name && (
+                        <div className="flex items-center space-x-1">
+                          <MapPin className="w-4 h-4" />
+                          <span>{supabaseTicket.stadium_name}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
+                  {/* Ticket Tiers Information */}
+                  {supabaseTicket?.ticket_tiers && supabaseTicket.ticket_tiers.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                        <Users className="w-4 h-4 mr-2" />
+                        Pricing Tiers
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {supabaseTicket.ticket_tiers.map((tier: any, index: number) => (
+                          <div key={tier.id} className="p-3 bg-gray-50 rounded-lg">
+                            <div className="font-medium text-sm">{tier.tier_name}</div>
+                            <div className="text-lg font-bold text-green-600">
+                              ${tier.tier_price.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {tier.tier_quantity} tickets
+                            </div>
+                            {tier.tier_description && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {tier.tier_description}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Price</p>
-                      <p className="text-lg font-bold text-gray-900">${ticket.price}</p>
+                      <p className="text-sm text-gray-600">Avg Price</p>
+                      <p className="text-lg font-bold text-gray-900">${ticket.price.toFixed(2)}</p>
                     </div>
                     <div className="text-center p-3 bg-gray-50 rounded-lg">
                       <p className="text-sm text-gray-600">Total Revenue</p>

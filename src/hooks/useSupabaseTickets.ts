@@ -12,7 +12,24 @@ export interface SupabaseTicket {
   quantity: number;
   pdf_url?: string;
   created_at: string;
+  // New soccer-specific fields
+  event_date?: string;
+  event_start_time?: string;
+  event_end_time?: string;
+  home_team?: string;
+  away_team?: string;
+  stadium_name?: string;
+  competition?: string;
   individual_tickets: SupabaseIndividualTicket[];
+  ticket_tiers?: SupabaseTicketTier[];
+}
+
+export interface SupabaseTicketTier {
+  id: string;
+  tier_name: string;
+  tier_price: number;
+  tier_quantity: number;
+  tier_description?: string;
 }
 
 export interface SupabaseIndividualTicket {
@@ -21,6 +38,10 @@ export interface SupabaseIndividualTicket {
   qr_code_image?: string;
   is_used: boolean;
   validated_at?: string;
+  tier_id?: string;
+  seat_section?: string;
+  seat_row?: string;
+  seat_number?: string;
 }
 
 export const useSupabaseTickets = () => {
@@ -37,7 +58,8 @@ export const useSupabaseTickets = () => {
         .from('tickets')
         .select(`
           *,
-          individual_tickets (*)
+          individual_tickets (*),
+          ticket_tiers (*)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -53,6 +75,124 @@ export const useSupabaseTickets = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createEnhancedTicketBatch = async (
+    eventData: any,
+    tiers: any[],
+    individualTickets: any[]
+  ) => {
+    if (!user) return null;
+
+    try {
+      // Create ticket batch with enhanced fields
+      const { data: ticketBatch, error: batchError } = await supabase
+        .from('tickets')
+        .insert({
+          user_id: user.id,
+          event_title: eventData.eventTitle,
+          description: eventData.description,
+          price: tiers.reduce((sum, tier) => sum + (tier.tier_price * tier.tier_quantity), 0) / tiers.reduce((sum, tier) => sum + tier.tier_quantity, 0), // Average price
+          quantity: tiers.reduce((sum, tier) => sum + tier.tier_quantity, 0),
+          event_date: eventData.eventDate,
+          event_start_time: eventData.eventStartTime,
+          event_end_time: eventData.eventEndTime,
+          home_team: eventData.homeTeam,
+          away_team: eventData.awayTeam,
+          stadium_name: eventData.stadiumName,
+          competition: eventData.competition,
+        })
+        .select()
+        .single();
+
+      if (batchError) throw batchError;
+
+      // Create ticket tiers
+      const tiersToInsert = tiers.map(tier => ({
+        ticket_batch_id: ticketBatch.id,
+        tier_name: tier.tier_name,
+        tier_price: tier.tier_price,
+        tier_quantity: tier.tier_quantity,
+        tier_description: tier.tier_description,
+      }));
+
+      const { data: insertedTiers, error: tiersError } = await supabase
+        .from('ticket_tiers')
+        .insert(tiersToInsert)
+        .select();
+
+      if (tiersError) throw tiersError;
+
+      // Create individual tickets with tier assignments
+      const ticketsToInsert = individualTickets.map(ticket => ({
+        ticket_batch_id: ticketBatch.id,
+        qr_code: ticket.qrCode,
+        qr_code_image: ticket.qrCodeImage,
+        tier_id: ticket.tierId,
+        seat_section: ticket.seatSection,
+        seat_row: ticket.seatRow,
+        seat_number: ticket.seatNumber,
+      }));
+
+      const { error: ticketsError } = await supabase
+        .from('individual_tickets')
+        .insert(ticketsToInsert);
+
+      if (ticketsError) throw ticketsError;
+
+      // Generate and upload PDF
+      const pdfResult = await generateAndUploadTicketPDF(
+        individualTickets,
+        {
+          id: ticketBatch.id,
+          eventTitle: eventData.eventTitle,
+          description: eventData.description || '',
+          price: ticketBatch.price,
+          quantity: ticketBatch.quantity,
+          createdAt: new Date(ticketBatch.created_at),
+          tickets: individualTickets,
+          // Pass enhanced event data
+          eventDate: eventData.eventDate,
+          eventStartTime: eventData.eventStartTime,
+          eventEndTime: eventData.eventEndTime,
+          homeTeam: eventData.homeTeam,
+          awayTeam: eventData.awayTeam,
+          stadiumName: eventData.stadiumName,
+          competition: eventData.competition,
+        },
+        user.id
+      );
+
+      // Update ticket batch with PDF URL if successful
+      if (pdfResult.success && pdfResult.pdfUrl) {
+        const { error: updateError } = await supabase
+          .from('tickets')
+          .update({ pdf_url: pdfResult.pdfUrl })
+          .eq('id', ticketBatch.id);
+
+        if (updateError) {
+          console.error('Failed to update PDF URL:', updateError);
+        }
+      } else if (pdfResult.error) {
+        console.error('PDF generation failed:', pdfResult.error);
+        toast({
+          title: "Warning",
+          description: "Tickets created successfully, but PDF generation failed. You can regenerate it later.",
+          variant: "destructive",
+        });
+      }
+
+      await fetchTickets();
+      return ticketBatch;
+    } catch (error) {
+      console.error('Error creating enhanced ticket batch:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create tickets",
+        variant: "destructive",
+      });
+      return null;
     }
   };
 
@@ -235,6 +375,7 @@ export const useSupabaseTickets = () => {
     tickets,
     loading,
     createTicketBatch,
+    createEnhancedTicketBatch,
     validateTicket,
     regeneratePDF,
     refetch: fetchTickets,
