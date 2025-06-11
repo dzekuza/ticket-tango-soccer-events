@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Ticket as TicketIcon } from 'lucide-react';
 import { Ticket, IndividualTicket } from './Dashboard';
 import { useToast } from '@/hooks/use-toast';
 
@@ -109,7 +110,7 @@ export const TicketCreation: React.FC<TicketCreationProps> = ({ onTicketCreated 
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Ticket className="w-5 h-5 text-green-600" />
+            <TicketIcon className="w-5 h-5 text-green-600" />
             <span>Event Details</span>
           </CardTitle>
         </CardHeader>
