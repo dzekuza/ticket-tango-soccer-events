@@ -1,6 +1,10 @@
 
 import React, { useState } from 'react';
-import { Sidebar } from './Sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { AppSidebar } from './AppSidebar';
+import { MobileBottomNav } from './MobileBottomNav';
+import { ResponsiveHeader } from './ResponsiveHeader';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { TicketCreation } from './TicketCreation';
 import { TicketList } from './TicketList';
 import { TicketScanner } from './TicketScanner';
@@ -29,6 +33,7 @@ export interface IndividualTicket {
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const isMobile = useIsMobile();
 
   const addTicketBatch = (newTicket: Ticket) => {
     setTickets(prev => [...prev, newTicket]);
@@ -61,14 +66,24 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <main className="flex-1 p-6">
-        <div className="max-w-7xl mx-auto">
-          {renderActiveComponent()}
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        {!isMobile && (
+          <AppSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        )}
+        <div className="flex-1 flex flex-col">
+          <ResponsiveHeader />
+          <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">
+            <div className="max-w-7xl mx-auto">
+              {renderActiveComponent()}
+            </div>
+          </main>
         </div>
-      </main>
-    </div>
+        {isMobile && (
+          <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        )}
+      </div>
+    </SidebarProvider>
   );
 };
 
